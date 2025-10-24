@@ -85,9 +85,12 @@ export default function Hero() {
                 <ArrowRightIcon className={`w-5 h-5 ml-2 transition-transform duration-300 ${isHovered ? 'translate-x-1' : ''}`} />
               </button>
               
-              <button className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-gray-700 bg-white border-2 border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-300">
-                Zobacz demo
-              </button>
+              <a 
+                href="/login"
+                className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-gray-700 bg-white border-2 border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-300"
+              >
+                Mam już dostęp
+              </a>
             </div>
 
             {/* Trust Indicators */}
