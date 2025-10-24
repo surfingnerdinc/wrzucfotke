@@ -98,7 +98,7 @@ export default function AIIntegrations() {
           {/* AI Capabilities */}
           <div className="grid lg:grid-cols-3 gap-8 mb-20">
             {aiCapabilities.map((capability, index) => (
-              <div key={index} className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border border-gray-200 hover:shadow-lg transition-all duration-300">
+              <div key={index} className="bg-linear-to-br from-white to-gray-50 rounded-2xl p-8 border border-gray-200 hover:shadow-lg transition-all duration-300">
                 <div className={`w-16 h-16 bg-linear-to-r from-${capability.color}-100 to-${capability.color}-200 rounded-2xl flex items-center justify-center mb-6`}>
                   <span className="text-3xl">🤖</span>
                 </div>

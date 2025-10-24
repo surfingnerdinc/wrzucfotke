@@ -122,7 +122,7 @@ export default function Hero() {
                       <span className="text-green-400 text-sm">89% oszczędność czasu</span>
                     </div>
                     <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
-                      <div className="bg-gradient-to-r from-purple-500 to-cyan-500 h-2 rounded-full" style={{width: '89%'}}></div>
+                      <div className="bg-linear-to-r from-purple-500 to-cyan-500 h-2 rounded-full" style={{width: '89%'}}></div>
                     </div>
                   </div>
                 </div>
