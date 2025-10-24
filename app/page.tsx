@@ -1,14 +1,13 @@
-import Navigation from './components/Navigation';
 import Hero from './components/hero/Hero';
 import Features from './components/hero/Features';
 import HowItWorks from './components/hero/HowItWorks';
 import Pricing from './components/hero/Pricing';
+import ContactSection from './components/contact/ContactSection';
 import Footer from './components/hero/Footer';
 
 export default function Home() {
   return (
     <div className="">
-      <Navigation />
       <Hero />
       <section id="features">
         <Features />
@@ -18,6 +17,9 @@ export default function Home() {
       </section>
       <section id="pricing">
         <Pricing />
+      </section>
+      <section id="contact">
+        <ContactSection />
       </section>
       <Footer />
     </div>
