@@ -5,6 +5,9 @@ import { ArrowRightIcon, PhotoIcon, CloudArrowDownIcon, ClockIcon, ShareIcon } f
 
 export default function Hero() {
   const [isHovered, setIsHovered] = useState(false);
+  const goToDemo = () => {
+    window.location.href = '/dashboard';
+  }
 
   return (
     <section className="relative overflow-hidden bg-linear-to-br from-indigo-50 via-white to-cyan-50 min-h-screen flex items-center">
@@ -79,6 +82,7 @@ export default function Hero() {
               <button
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
+                onClick={() => goToDemo()}
                 className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-white bg-linear-to-r from-indigo-600 to-purple-600 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
               >
                 Stwórz galerię za darmo

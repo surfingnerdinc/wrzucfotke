@@ -104,7 +104,7 @@ export default function Pricing() {
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Miesięcznie
+              Galeria
             </button>
             <button
               onClick={() => setIsAnnual(true)}
@@ -114,7 +114,7 @@ export default function Pricing() {
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Rocznie
+              Ze stronką
               <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
                 -20%
               </span>

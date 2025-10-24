@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   HeartIcon, 
   PhotoIcon, 
@@ -11,6 +11,7 @@ import {
   ChartBarIcon,
   Cog6ToothIcon
 } from '@heroicons/react/24/outline';
+import RecentActivity from './RecentActivity';
 import { 
   HeartIcon as HeartIconSolid,
   PhotoIcon as PhotoIconSolid
@@ -33,11 +34,19 @@ interface GalleryStats {
   downloads: number;
 }
 
+interface GallerySettings {
+  requireName: boolean;
+  allowDownload: boolean;
+  moderatePhotos: boolean;
+  allowComments: boolean;
+}
+
 interface DashboardProps {
   userPlan: UserPlan;
   galleryStats: GalleryStats;
   eventName: string;
   eventDate: string;
+  gallerySettings?: GallerySettings;
 }
 
 export default function Dashboard({ 
@@ -57,8 +66,55 @@ export default function Dashboard({
     downloads: 12
   },
   eventName = "Wesele Ania & Tomek 💕",
-  eventDate = "2024-10-12"
+  eventDate = "2025-12-14",
+  gallerySettings = {
+    requireName: true,
+    allowDownload: true,
+    moderatePhotos: false,
+    allowComments: true
+  }
 }: Partial<DashboardProps> = {}) {
+
+  const [timeLeft, setTimeLeft] = useState({
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0
+  });
+
+  // Calculate time remaining until event
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const eventDateTime = new Date(eventDate).getTime();
+      const now = new Date().getTime();
+      const difference = eventDateTime - now;
+
+      if (difference > 0) {
+        const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+        setTimeLeft({ days, hours, minutes, seconds });
+      } else {
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+      }
+    };
+
+    // Calculate immediately
+    calculateTimeLeft();
+
+    // Update every second
+    const timer = setInterval(calculateTimeLeft, 1000);
+
+    return () => clearInterval(timer);
+  }, [eventDate]);
+
+  const isEventPassed = new Date(eventDate).getTime() < new Date().getTime();
+
+  const handleSettingsClick = () => {
+    window.location.href = '/dashboard/settings';
+  };
 
   const getPlanColor = (planType: string) => {
     switch (planType) {
@@ -102,21 +158,83 @@ export default function Dashboard({
         
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div>
               <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
                 {eventName}
               </h1>
               <p className="text-gray-600 flex items-center">
                 <CalendarIcon className="w-5 h-5 mr-2" />
-                {eventDate}
+                {new Date(eventDate).toLocaleDateString('pl-PL', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
               </p>
             </div>
-            
-            <button className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors">
-              <Cog6ToothIcon className="w-5 h-5 mr-2" />
-              Ustawienia
-            </button>
+
+            {/* Countdown Timer */}
+            <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4">
+              {!isEventPassed ? (
+                <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200 min-w-0">
+                  <div className="text-center mb-3">
+                    <div className="flex items-center justify-center mb-2">
+                      <HeartIcon className="w-5 h-5 text-pink-500 mr-2" />
+                      <span className="text-sm font-medium text-gray-600">Do wielkiego dnia zostało</span>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-4 gap-3 text-center">
+                    <div className="bg-linear-to-br from-pink-50 to-purple-50 rounded-xl p-3">
+                      <div className="text-2xl font-bold text-pink-600">{timeLeft.days}</div>
+                      <div className="text-xs text-gray-600 font-medium">dni</div>
+                    </div>
+                    <div className="bg-linear-to-br from-purple-50 to-indigo-50 rounded-xl p-3">
+                      <div className="text-2xl font-bold text-purple-600">{timeLeft.hours}</div>
+                      <div className="text-xs text-gray-600 font-medium">godz</div>
+                    </div>
+                    <div className="bg-linear-to-br from-indigo-50 to-blue-50 rounded-xl p-3">
+                      <div className="text-2xl font-bold text-indigo-600">{timeLeft.minutes}</div>
+                      <div className="text-xs text-gray-600 font-medium">min</div>
+                    </div>
+                    <div className="bg-linear-to-br from-blue-50 to-cyan-50 rounded-xl p-3">
+                      <div className="text-2xl font-bold text-blue-600">{timeLeft.seconds}</div>
+                      <div className="text-xs text-gray-600 font-medium">sek</div>
+                    </div>
+                  </div>
+                  
+                  {timeLeft.days <= 7 && timeLeft.days > 0 && (
+                    <div className="mt-3 text-center">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                        <ClockIcon className="w-3 h-3 mr-1" />
+                        Już wkrótce!
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
+                  <div className="text-center">
+                    <div className="flex items-center justify-center mb-2">
+                      <HeartIcon className="w-6 h-6 text-pink-500 mr-2" />
+                      <span className="text-lg font-bold text-gray-900">Wielki dzień już był!</span>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      Mamy nadzieję, że było wspaniale! 💕
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              <a 
+                href="/dashboard/settings"
+                className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                <Cog6ToothIcon className="w-5 h-5 mr-2" />
+                Ustawienia
+              </a>
+            </div>
           </div>
         </div>
 
@@ -305,41 +423,10 @@ export default function Dashboard({
         </div>
 
         {/* Recent Activity */}
-        <div className="mt-8 bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <h3 className="text-xl font-bold text-gray-900 mb-6">Ostatnia aktywność</h3>
-          
-          <div className="space-y-4">
-            <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-xl">
-              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                <PhotoIcon className="w-5 h-5 text-blue-600" />
-              </div>
-              <div className="flex-1">
-                <p className="font-medium text-gray-900">Anna K. dodała 12 zdjęć</p>
-                <p className="text-sm text-gray-600">2 godziny temu</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-xl">
-              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                <UserGroupIcon className="w-5 h-5 text-green-600" />
-              </div>
-              <div className="flex-1">
-                <p className="font-medium text-gray-900">Tomek M. dołączył do galerii</p>
-                <p className="text-sm text-gray-600">5 godzin temu</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-xl">
-              <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                <ChartBarIcon className="w-5 h-5 text-purple-600" />
-              </div>
-              <div className="flex-1">
-                <p className="font-medium text-gray-900">Galeria została pobrana</p>
-                <p className="text-sm text-gray-600">1 dzień temu</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <RecentActivity 
+          requireNameEnabled={gallerySettings.requireName}
+          onSettingsClick={handleSettingsClick}
+        />
       </div>
     </div>
   );
