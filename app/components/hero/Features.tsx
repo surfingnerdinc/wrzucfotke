@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { 
   PhotoIcon, 
   CloudArrowDownIcon, 
@@ -10,8 +11,22 @@ import {
   GlobeAltIcon,
   HeartIcon 
 } from '@heroicons/react/24/outline';
+import FeatureModal from './FeatureModal';
 
 export default function Features() {
+  const [selectedFeature, setSelectedFeature] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleFeatureClick = (feature: any) => {
+    setSelectedFeature(feature);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedFeature(null);
+  };
+
   const features = [
     {
       icon: PhotoIcon,
@@ -93,7 +108,8 @@ export default function Features() {
             return (
               <div 
                 key={index}
-                className="group relative bg-white rounded-2xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100"
+                onClick={() => handleFeatureClick(feature)}
+                className="group relative bg-white rounded-2xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 cursor-pointer"
               >
                 {/* Background Gradient on Hover */}
                 <div className={`absolute inset-0 ${feature.bgColor} rounded-2xl opacity-0 group-hover:opacity-10 transition-opacity duration-300`}></div>
@@ -111,12 +127,19 @@ export default function Features() {
                   {feature.description}
                 </p>
 
-                {/* Hover Effect Arrow */}
+                {/* Click to Learn More */}
                 <div className="absolute bottom-6 right-6 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
-                  <div className={`w-8 h-8 rounded-full bg-linear-to-r ${feature.color} flex items-center justify-center`}>
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  <div className={`w-10 h-10 rounded-full bg-linear-to-r ${feature.color} flex items-center justify-center shadow-lg`}>
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
+                  </div>
+                </div>
+
+                {/* Click Indicator */}
+                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                  <div className="px-3 py-1 bg-gray-900 text-white text-xs rounded-full">
+                    Kliknij aby dowiedzieć się więcej
                   </div>
                 </div>
               </div>
@@ -144,6 +167,13 @@ export default function Features() {
           </button>
         </div>
       </div>
+
+      {/* Feature Modal */}
+      <FeatureModal
+        feature={selectedFeature}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+      />
     </section>
   );
 }

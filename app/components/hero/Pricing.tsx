@@ -34,11 +34,11 @@ export default function Pricing() {
     {
       name: "Wedding",
       subtitle: "Najlepszy na wesela! 💒",
-      price: { monthly: 49, annual: 39 },
+      price: { monthly: 250, annual: 600 },
       originalPrice: { monthly: 99, annual: 79 },
       description: "Wszystko czego potrzebujesz na wesele",
       features: [
-        "Do 30 dni przechowywania",
+        "Do 14 dni przechowywania",
         "Nieograniczona ilość zdjęć",
         "Zaawansowane udostępnianie",
         "Kod QR do galerii",
@@ -56,8 +56,8 @@ export default function Pricing() {
     },
     {
       name: "Pro",
-      subtitle: "Dla firm eventowych",
-      price: { monthly: 99, annual: 79 },
+      subtitle: "Dla wymagających klinetów",
+      price: { monthly: 450, annual: 0 },
       originalPrice: null,
       description: "Profesjonalne rozwiązanie dla eventów",
       features: [
@@ -160,15 +160,15 @@ export default function Pricing() {
                       {isAnnual ? plan.price.annual : plan.price.monthly}
                     </span>
                     <span className="text-gray-600 ml-2">
-                      {plan.price.monthly === 0 ? 'zł' : (isAnnual ? 'zł/rok' : 'zł/mies')}
+                      {plan.price.monthly === 0 ? 'zł' : (isAnnual ? 'zł' : 'zł')}
                     </span>
                   </div>
                   {plan.originalPrice && (
                     <div className="text-green-600 font-semibold text-sm mt-2">
                       Oszczędzasz {isAnnual 
-                        ? (plan.originalPrice.annual - plan.price.annual) * 12 
-                        : (plan.originalPrice.monthly - plan.price.monthly) * 12
-                      } zł rocznie!
+                        ? (plan.originalPrice.annual - plan.price.annual)
+                        : (plan.originalPrice.monthly - plan.price.monthly)
+                      } zł kupując z własną stroną!
                     </div>
                   )}
                 </div>
