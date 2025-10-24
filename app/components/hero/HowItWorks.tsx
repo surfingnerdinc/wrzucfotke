@@ -65,6 +65,22 @@ export default function HowItWorks() {
     },
     {
       id: 4,
+      title: "Edytuj i Twórz",
+      subtitle: "Profesjonalne narzędzia",
+      description: "Poprawiaj zdjęcia z 11 filtrami, twórz plakaty z kodami QR i generuj gotowe do druku PDF-y w różnych formatach.",
+      icon: QrCodeIcon,
+      color: "from-violet-500 to-purple-500",
+      bgColor: "bg-violet-50",
+      image: "https://picsum.photos/400/300?random=14", 
+      details: [
+        "11 profesjonalnych filtrów do zdjęć",
+        "Kreator plakatów i winiet z kodami QR",
+        "7 różnych formatów do druku (A4, A3, A1, wizytówki)",
+        "Orientacja pionowa i pozioma"
+      ]
+    },
+    {
+      id: 5,
       title: "Pobierz Wszystko",
       subtitle: "Jednym kliknięciem",
       description: "Kiedy impreza się kończy, pobierasz wszystkie zdjęcia jako archiwum ZIP. Wszystko w najwyższej jakości!",

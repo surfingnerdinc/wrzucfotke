@@ -9,7 +9,11 @@ import {
   ShieldCheckIcon, 
   DevicePhoneMobileIcon,
   GlobeAltIcon,
-  HeartIcon 
+  HeartIcon,
+  PaintBrushIcon,
+  DocumentTextIcon,
+  QrCodeIcon,
+  SparklesIcon
 } from '@heroicons/react/24/outline';
 import FeatureModal from './FeatureModal';
 
@@ -36,11 +40,32 @@ export default function Features() {
       bgColor: "bg-purple-50"
     },
     {
+      icon: PaintBrushIcon,
+      title: "Edycja Zdjęć",
+      description: "11 różnych filtrów i efektów! Popraw jasność, kontrast, dodaj sepia czy blur. Profesjonalna edycja w przeglądarce.",
+      color: "from-violet-500 to-purple-500",
+      bgColor: "bg-violet-50"
+    },
+    {
+      icon: DocumentTextIcon,
+      title: "Kreator Plakatów",
+      description: "Stwórz profesjonalne plakaty i winietki! 7 formatów, różne layouty, orientacja pionowa i pozioma. Gotowe do druku!",
+      color: "from-emerald-500 to-teal-500",
+      bgColor: "bg-emerald-50"
+    },
+    {
+      icon: QrCodeIcon,
+      title: "Generator Kodów QR",
+      description: "Automatyczne generowanie kodów QR do galerii! Wydrukuj i umieść na stołach - goście łatwo dotrą do zdjęć.",
+      color: "from-blue-500 to-indigo-500",
+      bgColor: "bg-blue-50"
+    },
+    {
       icon: CloudArrowDownIcon,
       title: "Pobieranie Za Darmo",
       description: "Wszystkie zdjęcia w najwyższej jakości. Pobierz wszystko jednym kliknięciem jako archiwum ZIP. Zawsze za darmo!",
-      color: "from-blue-500 to-cyan-500",
-      bgColor: "bg-blue-50"
+      color: "from-cyan-500 to-blue-500",
+      bgColor: "bg-cyan-50"
     },
     {
       icon: ClockIcon,
@@ -71,11 +96,18 @@ export default function Features() {
       bgColor: "bg-teal-50"
     },
     {
+      icon: SparklesIcon,
+      title: "Usuwanie Tła",
+      description: "Profesjonalne usuwanie tła ze zdjęć! Idealne do tworzenia eleganckich kompozycji na plakatach i winietek.",
+      color: "from-pink-500 to-rose-500",
+      bgColor: "bg-pink-50"
+    },
+    {
       icon: GlobeAltIcon,
       title: "Bez Instalacji Aplikacji",
       description: "Wszystko w przeglądarce! Goście nie muszą nic instalować. Wystarczy kliknąć w link i już mogą wrzucać fotki.",
-      color: "from-pink-500 to-rose-500",
-      bgColor: "bg-pink-50"
+      color: "from-amber-500 to-orange-500",
+      bgColor: "bg-amber-50"
     },
     {
       icon: HeartIcon,

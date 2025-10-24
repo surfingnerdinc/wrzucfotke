@@ -19,11 +19,13 @@ export default function Pricing() {
         "Do 50 zdjęć",
         "Podstawowe udostępnianie",
         "Pobieranie ZIP",
+        "Podstawowe filtry (3)",
         "Wsparcie email"
       ],
       limitations: [
-        "Brak zaawansowanych funkcji",
-        "Ograniczona ilość zdjęć"
+        "Brak kreatora PDF",
+        "Ograniczone filtry",
+        "Brak usuwania tła"
       ],
       color: "gray",
       gradient: "from-gray-500 to-gray-600",
@@ -42,6 +44,9 @@ export default function Pricing() {
         "Nieograniczona ilość zdjęć",
         "Zaawansowane udostępnianie",
         "Kod QR do galerii",
+        "Kreator plakatów PDF (7 formatów)",
+        "11 profesjonalnych filtrów",
+        "Usuwanie tła ze zdjęć", 
         "Własny link (np. ania-tomek)",
         "Wsparcie priorytetowe",
         "Statystyki gości",
@@ -64,6 +69,10 @@ export default function Pricing() {
         "90 dni przechowywania",
         "Nieograniczona ilość zdjęć",
         "Wszystkie funkcje Wedding",
+        "Zaawansowany kreator PDF",
+        "Niestandardowe formaty druku",
+        "Batch edycja zdjęć",
+        "AI usprawnienia",
         "Białe etykiety (Twój branding)",
         "API dostęp",
         "Masowe zarządzanie eventami",

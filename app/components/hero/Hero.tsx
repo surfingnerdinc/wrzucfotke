@@ -56,24 +56,30 @@ export default function Hero() {
               </div>
               
               <div className="flex items-center space-x-3">
+                <div className="shrink-0 w-8 h-8 bg-violet-100 rounded-full flex items-center justify-center">
+                  <svg className="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                </div>
+                <span className="text-gray-700 font-medium">Kreator plakatów PDF</span>
+              </div>
+              
+              <div className="flex items-center space-x-3">
                 <div className="shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                  <CloudArrowDownIcon className="w-5 h-5 text-blue-600" />
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
                 </div>
-                <span className="text-gray-700 font-medium">Pobierz wszystko za darmo</span>
+                <span className="text-gray-700 font-medium">11 filtrów edycji</span>
               </div>
               
               <div className="flex items-center space-x-3">
-                <div className="shrink-0 w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                  <ClockIcon className="w-5 h-5 text-purple-600" />
+                <div className="shrink-0 w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
+                  <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h4M4 8h4m4 0V4m0 0h.01M12 4h4.01M12 4H8M4 16h4m0 0v4m0-4h.01" />
+                  </svg>
                 </div>
-                <span className="text-gray-700 font-medium">30-365 dni przechowywania</span>
-              </div>
-              
-              <div className="flex items-center space-x-3">
-                <div className="shrink-0 w-8 h-8 bg-pink-100 rounded-full flex items-center justify-center">
-                  <ShareIcon className="w-5 h-5 text-pink-600" />
-                </div>
-                <span className="text-gray-700 font-medium">Łatwe udostępnienie</span>
+                <span className="text-gray-700 font-medium">Generator kodów QR</span>
               </div>
             </div>
 

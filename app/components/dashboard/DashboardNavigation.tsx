@@ -9,7 +9,8 @@ import {
   PhotoIcon,
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
-  PencilSquareIcon
+  PencilSquareIcon,
+  DocumentIcon
 } from '@heroicons/react/24/outline';
 
 interface DashboardNavProps {
@@ -18,7 +19,8 @@ interface DashboardNavProps {
 }
 
 export default function DashboardNavigation({ 
-  eventName = "Wesele Ania & Tomek 💕",
+  // eventName = "Wesele Ania & Tomek 💕",
+  eventName = "",
   userEmail = "anna.kowalska@email.com"
 }: DashboardNavProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -27,6 +29,7 @@ export default function DashboardNavigation({
     { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
     { name: 'Galeria', href: '/dashboard/gallery', icon: PhotoIcon },
     { name: 'Edytor', href: '/dashboard/editor', icon: PencilSquareIcon },
+    { name: 'Kreator', href: '/dashboard/creator', icon: DocumentIcon },
     { name: 'Ustawienia', href: '/dashboard/settings', icon: Cog6ToothIcon }
   ];
 
