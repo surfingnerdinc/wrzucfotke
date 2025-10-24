@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -17,17 +18,17 @@ interface SidebarProps {
 
 export default function Sidebar({ collapsed, onToggleCollapse, activeSection, onSectionChange, user }: SidebarProps) {
   const navigationItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: '📊', active: true },
-    { id: 'leads', label: 'Leady', icon: '🎯', badge: '12' },
-    { id: 'clients', label: 'Klienci', icon: '👥', badge: null },
-    { id: 'projects', label: 'Projekty', icon: '📋', badge: '5' },
-    { id: 'calendar', label: 'Kalendarz', icon: '📅', badge: null },
-    { id: 'tasks', label: 'Zadania', icon: '✅', badge: '8' },
-    { id: 'analytics', label: 'Analityka', icon: '📈', badge: null },
-    { id: 'ai-assistant', label: 'AI Asystent', icon: '🤖', badge: 'AI' },
-    { id: 'automation', label: 'Automatyzacja', icon: '⚡', badge: null },
-    { id: 'reports', label: 'Raporty', icon: '📄', badge: null },
-    { id: 'settings', label: 'Ustawienia', icon: '⚙️', badge: null }
+    { id: 'dashboard', label: 'Dashboard', icon: '📊', active: true, href: '/dashboard' },
+    { id: 'leads', label: 'Leady', icon: '🎯', badge: '12', href: '/dashboard/leads' },
+    { id: 'customers', label: 'Klienci', icon: '👥', badge: '6', href: '/dashboard/customers' },
+    { id: 'projects', label: 'Projekty', icon: '📋', badge: '5', href: '/dashboard/projects' },
+    { id: 'calendar', label: 'Kalendarz', icon: '📅', badge: null, href: '/dashboard/calendar' },
+    { id: 'tasks', label: 'Zadania', icon: '✅', badge: '8', href: '/dashboard/tasks' },
+    { id: 'analytics', label: 'Analityka', icon: '📈', badge: null, href: '/dashboard/analytics' },
+    { id: 'ai-assistant', label: 'AI Asystent', icon: '🤖', badge: 'AI', href: '/dashboard/ai' },
+    { id: 'automation', label: 'Automatyzacja', icon: '⚡', badge: null, href: '/dashboard/automation' },
+    { id: 'reports', label: 'Raporty', icon: '📄', badge: null, href: '/dashboard/reports' },
+    { id: 'settings', label: 'Ustawienia', icon: '⚙️', badge: null, href: '/dashboard/settings' }
   ];
 
   return (
@@ -68,8 +69,9 @@ export default function Sidebar({ collapsed, onToggleCollapse, activeSection, on
       <nav className="flex-1 p-4">
         <div className="space-y-1">
           {navigationItems.map((item) => (
-            <button
+            <Link
               key={item.id}
+              href={item.href}
               onClick={() => onSectionChange(item.id)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all duration-200 ${
                 activeSection === item.id
@@ -95,7 +97,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, activeSection, on
                   )}
                 </>
               )}
-            </button>
+            </Link>
           ))}
         </div>
         
