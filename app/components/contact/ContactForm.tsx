@@ -180,7 +180,7 @@ export default function ContactForm({ compact = false }: { compact?: boolean }) 
           
           {/* Left Column - Info */}
           <div className={compact ? 'hidden' : ''}>
-            <div className="sticky top-24">
+            <div>
               <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
                 Skontaktuj się <span className="bg-linear-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">z nami</span>
               </h2>
