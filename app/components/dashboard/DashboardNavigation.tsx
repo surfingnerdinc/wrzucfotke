@@ -8,7 +8,8 @@ import {
   HomeIcon,
   PhotoIcon,
   Cog6ToothIcon,
-  ArrowRightOnRectangleIcon
+  ArrowRightOnRectangleIcon,
+  PencilSquareIcon
 } from '@heroicons/react/24/outline';
 
 interface DashboardNavProps {
@@ -25,6 +26,7 @@ export default function DashboardNavigation({
   const navLinks = [
     { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
     { name: 'Galeria', href: '/dashboard/gallery', icon: PhotoIcon },
+    { name: 'Edytor', href: '/dashboard/editor', icon: PencilSquareIcon },
     { name: 'Ustawienia', href: '/dashboard/settings', icon: Cog6ToothIcon }
   ];
 
