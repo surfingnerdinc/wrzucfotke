@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Sidebar from '../components/Sidebar';
 import DashboardHeader from '../components/DashboardHeader';
+import { usePlan } from '../../contexts/PlanContext';
 
 interface CalendarEvent {
   id: string;
@@ -49,6 +50,17 @@ interface CalendarEvent {
 }
 
 export default function CalendarPage() {
+  const {
+    userPlan,
+    usage,
+    canEnableFeature,
+    getUsagePercentage,
+    isUsageNearLimit,
+    setShowUpgradeModal,
+    incrementUsage,
+    decrementUsage,
+  } = usePlan();
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState('calendar');
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'day' | 'agenda'>('month');
@@ -59,12 +71,13 @@ export default function CalendarPage() {
   const [draggedEvent, setDraggedEvent] = useState<CalendarEvent | null>(null);
   const [eventFilter, setEventFilter] = useState<string[]>(['meeting', 'task', 'deadline', 'call', 'reminder']);
   const [searchQuery, setSearchQuery] = useState('');
+  const [aiQuestionCount, setAiQuestionCount] = useState(0);
 
   const user = {
     name: 'Marcin Dubiński',
     company: 'Core One Flow',
     avatar: '👨‍💼',
-    plan: 'Professional'
+    plan: userPlan.displayName
   };
 
   // Mock calendar events
@@ -573,6 +586,88 @@ export default function CalendarPage() {
               ))}
             </div>
           </div>
+
+          {/* AI Assistant Panel */}
+          {canEnableFeature('aiAssistant') && (
+            <div className="bg-linear-to-r from-purple-50 to-cyan-50 border border-purple-200 rounded-xl p-6 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <span className="text-purple-600 text-lg">🤖</span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">AI Assistant</h3>
+                    <p className="text-sm text-gray-600">
+                      Zapytaj o swój kalendarz lub zarządzanie czasem
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-4">
+                  {/* Usage counter */}
+                  <div className="text-right">
+                    <p className="text-sm text-gray-600">
+                      Wykorzystano: {usage.aiQueriesUsed}
+                      {userPlan.limits.aiQueries !== -1 && `/${userPlan.limits.aiQueries}`}
+                    </p>
+                    {userPlan.limits.aiQueries !== -1 && (
+                      <div className="w-24 bg-gray-200 rounded-full h-2 mt-1">
+                        <div
+                          className={`h-2 rounded-full ${
+                            isUsageNearLimit('aiQueries') ? 'bg-orange-500' : 'bg-purple-500'
+                          }`}
+                          style={{ width: `${Math.min(getUsagePercentage('aiQueries'), 100)}%` }}
+                        ></div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex space-x-3">
+                <input
+                  type="text"
+                  placeholder="Zapytaj AI o swój kalendarz..."
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                      if (userPlan.limits.aiQueries === -1 || usage.aiQueriesUsed < userPlan.limits.aiQueries) {
+                        // Process AI query here
+                        incrementUsage('aiQueriesUsed');
+                        setAiQuestionCount(prev => prev + 1);
+                        e.currentTarget.value = '';
+                      } else {
+                        setShowUpgradeModal(true);
+                      }
+                    }
+                  }}
+                />
+                <button
+                  onClick={() => {
+                    if (userPlan.limits.aiQueries === -1 || usage.aiQueriesUsed < userPlan.limits.aiQueries) {
+                      // Process AI query
+                      incrementUsage('aiQueriesUsed');
+                      setAiQuestionCount(prev => prev + 1);
+                    } else {
+                      setShowUpgradeModal(true);
+                    }
+                  }}
+                  className="bg-purple-500 text-white px-6 py-3 rounded-lg font-medium hover:bg-purple-600 transition-colors"
+                >
+                  Zapytaj
+                </button>
+              </div>
+              
+              {aiQuestionCount > 0 && (
+                <div className="mt-4 p-4 bg-white rounded-lg border border-purple-200">
+                  <p className="text-sm text-gray-600">
+                    💡 <strong>AI Odpowiedź:</strong> Zadałeś już {aiQuestionCount} pytań w tej sesji. 
+                    Funkcja AI jest dostępna w Twoim planie {userPlan.displayName}!
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Calendar Views */}
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">

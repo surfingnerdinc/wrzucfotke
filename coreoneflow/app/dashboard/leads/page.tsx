@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Sidebar from '../components/Sidebar';
 import DashboardHeader from '../components/DashboardHeader';
+import { usePlan } from '../../contexts/PlanContext';
 
 interface Lead {
   id: string;
@@ -68,6 +69,17 @@ interface LeadStats {
 }
 
 export default function LeadsPage() {
+  const {
+    userPlan,
+    usage,
+    canEnableFeature,
+    canCreateMore,
+    getUsagePercentage,
+    isUsageNearLimit,
+    setShowUpgradeModal,
+    incrementUsage,
+  } = usePlan();
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState('leads');
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'pipeline' | 'analytics'>('grid');
@@ -85,7 +97,7 @@ export default function LeadsPage() {
     name: 'Marcin Dubiński',
     company: 'Core One Flow',
     avatar: '👨‍💼',
-    plan: 'Professional'
+    plan: userPlan.displayName
   };
 
   // Mock leads data
@@ -557,19 +569,83 @@ export default function LeadsPage() {
         />
 
         <main className="flex-1 p-6">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">🎯 Lead Management</h1>
-              <p className="text-gray-600 mt-1">Zarządzaj potencjalnymi klientami i śledź pipeline sprzedaży</p>
+          {/* Check if leads feature is available */}
+          {!canEnableFeature('leads') ? (
+            <div className="max-w-2xl mx-auto text-center py-16">
+              <div className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm">
+                <div className="w-20 h-20 mx-auto mb-6 bg-orange-100 rounded-full flex items-center justify-center">
+                  <span className="text-3xl">🔒</span>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                  Lead Management niedostępny
+                </h2>
+                <p className="text-gray-600 mb-6 leading-relaxed">
+                  Twój aktualny plan <strong>{userPlan.displayName}</strong> nie zawiera funkcji zarządzania leadami. 
+                  Upgrade swojego planu, aby uzyskać dostęp do zaawansowanych narzędzi sprzedażowych.
+                </p>
+                <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                  <h3 className="font-semibold text-gray-900 mb-2">Co zyskasz po upgrade:</h3>
+                  <ul className="text-sm text-gray-600 space-y-1">
+                    <li>• Nieograniczone zarządzanie leadami</li>
+                    <li>• Pipeline sprzedaży z wizualizacją</li>
+                    <li>• Automatyczne śledzenie aktywności</li>
+                    <li>• Inteligentny scoring leadów</li>
+                    <li>• Raporty i analityki sprzedażowe</li>
+                  </ul>
+                </div>
+                <button
+                  onClick={() => setShowUpgradeModal(true)}
+                  className="bg-linear-to-r from-purple-500 to-cyan-500 text-white px-8 py-3 rounded-xl font-semibold hover:shadow-lg transition-all"
+                >
+                  🚀 Upgrade planu
+                </button>
+              </div>
             </div>
-            <button 
-              onClick={() => setShowCreateModal(true)}
-              className="bg-linear-to-r from-purple-500 to-cyan-500 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all"
-            >
-              ➕ Nowy Lead
-            </button>
-          </div>
+          ) : (
+            <>
+              {/* Header */}
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900">🎯 Lead Management</h1>
+                  <p className="text-gray-600 mt-1">Zarządzaj potencjalnymi klientami i śledź pipeline sprzedaży</p>
+                </div>
+                {canCreateMore('leads') ? (
+                  <button 
+                    onClick={() => {
+                      setShowCreateModal(true);
+                      // incrementUsage('leads'); // Add this when creating a lead
+                    }}
+                  >
+                    ➕ Nowy Lead
+                  </button>
+                ) : (
+                  <div className="relative group">
+                    <button 
+                      disabled
+                      className="bg-gray-400 text-white px-6 py-3 rounded-xl font-semibold cursor-not-allowed opacity-60"
+                    >
+                      ➕ Nowy Lead
+                    </button>
+                    <div className="absolute top-full right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg p-4 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                      <div className="flex items-start space-x-3">
+                        <span className="text-orange-500 text-xl">⚠️</span>
+                        <div>
+                          <h4 className="font-semibold text-gray-900 mb-1">Osiągnięto limit leadów</h4>
+                          <p className="text-sm text-gray-600 mb-3">
+                            Twój plan {userPlan.displayName} pozwala na maksymalnie {userPlan.limits.leads === -1 ? 'nieograniczoną liczbę' : userPlan.limits.leads} leadów.
+                          </p>
+                          <button
+                            onClick={() => setShowUpgradeModal(true)}
+                            className="bg-purple-500 text-white px-4 py-2 rounded text-sm font-medium hover:bg-purple-600 transition-colors"
+                          >
+                            Upgrade planu
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-6 mb-8">
@@ -950,6 +1026,8 @@ export default function LeadsPage() {
               </div>
             )}
           </div>
+            </>
+          )}
         </main>
       </div>
 

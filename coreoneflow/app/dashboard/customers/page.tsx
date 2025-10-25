@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Sidebar from '../components/Sidebar';
 import DashboardHeader from '../components/DashboardHeader';
+import { usePlan } from '../../contexts/PlanContext';
 
 interface Customer {
   id: string;
@@ -24,6 +25,16 @@ interface Customer {
 }
 
 export default function CustomersPage() {
+  const {
+    userPlan,
+    usage,
+    canCreateMore,
+    getUsagePercentage,
+    isUsageNearLimit,
+    setShowUpgradeModal,
+    incrementUsage,
+  } = usePlan();
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('customers');
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'kanban'>('grid');
@@ -35,7 +46,7 @@ export default function CustomersPage() {
     name: 'Marcin Dubinski',
     company: 'Core One Flow',
     avatar: '👨‍💼',
-    plan: 'Professional'
+    plan: userPlan.displayName
   };
 
   const customers: Customer[] = [
@@ -317,23 +328,86 @@ export default function CustomersPage() {
                 <h1 className="text-3xl font-bold text-gray-900">Klienci</h1>
                 <p className="text-gray-600">Zarządzaj swoimi klientami i śledź ich aktywność</p>
               </div>
-              <button className="bg-linear-to-r from-purple-500 to-cyan-500 text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all font-medium">
-                ➕ Dodaj Klienta
-              </button>
+              {canCreateMore('customers') ? (
+                <button 
+                  onClick={() => {
+                    // Add customer logic here
+                    incrementUsage('customers');
+                  }}
+                  className="bg-linear-to-r from-purple-500 to-cyan-500 text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all font-medium"
+                >
+                  ➕ Dodaj Klienta
+                </button>
+              ) : (
+                <div className="relative group">
+                  <button 
+                    disabled
+                    className="bg-gray-400 text-white px-6 py-3 rounded-lg font-medium cursor-not-allowed opacity-60"
+                  >
+                    ➕ Dodaj Klienta
+                  </button>
+                  <div className="absolute top-full right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg p-4 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                    <div className="flex items-start space-x-3">
+                      <span className="text-orange-500 text-xl">⚠️</span>
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-1">Osiągnięto limit klientów</h4>
+                        <p className="text-sm text-gray-600 mb-3">
+                          Twój plan {userPlan.displayName} pozwala na maksymalnie {userPlan.limits.customers === -1 ? 'nieograniczoną liczbę' : userPlan.limits.customers} klientów.
+                        </p>
+                        <button
+                          onClick={() => setShowUpgradeModal(true)}
+                          className="bg-purple-500 text-white px-4 py-2 rounded text-sm font-medium hover:bg-purple-600 transition-colors"
+                        >
+                          Upgrade planu
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Stats Overview */}
             <div className="grid grid-cols-4 gap-6 mb-6">
-              <div className="bg-white rounded-lg p-4 border border-gray-200">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                    <span className="text-green-600 text-lg">👥</span>
+              <div className={`bg-white rounded-lg p-4 border-2 ${
+                isUsageNearLimit('customers') ? 'border-orange-200' : 'border-gray-200'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                      <span className="text-green-600 text-lg">👥</span>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Klienci</p>
+                      <p className="text-xl font-bold text-gray-900">
+                        {usage.customers}
+                        {userPlan.limits.customers !== -1 && (
+                          <span className="text-sm text-gray-500 font-normal">
+                            /{userPlan.limits.customers}
+                          </span>
+                        )}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Wszyscy klienci</p>
-                    <p className="text-xl font-bold text-gray-900">{customers.length}</p>
-                  </div>
+                  {isUsageNearLimit('customers') && (
+                    <span className="text-orange-500">⚠️</span>
+                  )}
                 </div>
+                {userPlan.limits.customers !== -1 && (
+                  <div className="mt-3">
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className={`h-2 rounded-full ${
+                          isUsageNearLimit('customers') ? 'bg-orange-500' : 'bg-green-500'
+                        }`}
+                        style={{ width: `${Math.min(getUsagePercentage('customers'), 100)}%` }}
+                      ></div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {getUsagePercentage('customers')}% wykorzystane
+                    </p>
+                  </div>
+                )}
               </div>
               <div className="bg-white rounded-lg p-4 border border-gray-200">
                 <div className="flex items-center space-x-3">

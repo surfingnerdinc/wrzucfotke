@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Sidebar from '../components/Sidebar';
 import DashboardHeader from '../components/DashboardHeader';
+import { usePlan } from '../../contexts/PlanContext';
 
 interface Project {
   id: string;
@@ -60,6 +61,17 @@ interface Project {
 }
 
 export default function ProjectsPage() {
+  const {
+    userPlan,
+    usage,
+    canEnableFeature,
+    canCreateMore,
+    getUsagePercentage,
+    isUsageNearLimit,
+    setShowUpgradeModal,
+    incrementUsage,
+  } = usePlan();
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState('projects');
   const [viewMode, setViewMode] = useState<'cards' | 'timeline' | 'kanban' | 'analytics'>('cards');
@@ -71,7 +83,7 @@ export default function ProjectsPage() {
     name: 'Marcin Dubiński',
     company: 'Core One Flow',
     avatar: '👨‍💼',
-    plan: 'Professional'
+    plan: userPlan.displayName
   };
 
   // Mock projects data
@@ -331,9 +343,62 @@ export default function ProjectsPage() {
               <h1 className="text-3xl font-bold text-gray-900">Projekty</h1>
               <p className="text-gray-600 mt-1">Zarządzaj wszystkimi projektami w jednym miejscu</p>
             </div>
-            <button className="bg-linear-to-r from-purple-500 to-cyan-500 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all">
-              ➕ Nowy projekt
-            </button>
+            <div className="flex items-center space-x-4">
+              {/* Projects feature check */}
+              {!canEnableFeature('projects') ? (
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 flex items-center space-x-3">
+                  <span className="text-orange-500 text-xl">🔒</span>
+                  <div>
+                    <h4 className="font-semibold text-orange-800">Projekty niedostępne</h4>
+                    <p className="text-sm text-orange-600">
+                      Twój plan {userPlan.displayName} nie zawiera zarządzania projektami
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowUpgradeModal(true)}
+                    className="bg-orange-500 text-white px-4 py-2 rounded font-medium hover:bg-orange-600 transition-colors"
+                  >
+                    Upgrade
+                  </button>
+                </div>
+              ) : canCreateMore('projects') ? (
+                <button 
+                  onClick={() => {
+                    // Add project logic here
+                    incrementUsage('projects');
+                  }}
+                  className="bg-linear-to-r from-purple-500 to-cyan-500 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all"
+                >
+                  ➕ Nowy projekt
+                </button>
+              ) : (
+                <div className="relative group">
+                  <button 
+                    disabled
+                    className="bg-gray-400 text-white px-6 py-3 rounded-xl font-semibold cursor-not-allowed opacity-60"
+                  >
+                    ➕ Nowy projekt
+                  </button>
+                  <div className="absolute top-full right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg p-4 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                    <div className="flex items-start space-x-3">
+                      <span className="text-orange-500 text-xl">⚠️</span>
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-1">Osiągnięto limit projektów</h4>
+                        <p className="text-sm text-gray-600 mb-3">
+                          Twój plan {userPlan.displayName} pozwala na maksymalnie {userPlan.limits.projects === -1 ? 'nieograniczoną liczbę' : userPlan.limits.projects} projektów.
+                        </p>
+                        <button
+                          onClick={() => setShowUpgradeModal(true)}
+                          className="bg-purple-500 text-white px-4 py-2 rounded text-sm font-medium hover:bg-purple-600 transition-colors"
+                        >
+                          Upgrade planu
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Stats Cards */}
@@ -396,24 +461,39 @@ export default function ProjectsPage() {
                 {/* View Mode Toggle */}
                 <div className="flex items-center bg-gray-100 rounded-lg p-1">
                   {[
-                    { id: 'cards', icon: '📋', label: 'Karty' },
-                    { id: 'timeline', icon: '📅', label: 'Timeline' },
-                    { id: 'kanban', icon: '📌', label: 'Kanban' },
-                    { id: 'analytics', icon: '📊', label: 'Analityka' }
-                  ].map((mode) => (
-                    <button
-                      key={mode.id}
-                      onClick={() => setViewMode(mode.id as any)}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                        viewMode === mode.id
-                          ? 'bg-white text-purple-600 shadow-sm'
-                          : 'text-gray-600 hover:text-gray-900'
-                      }`}
-                    >
-                      <span>{mode.icon}</span>
-                      <span>{mode.label}</span>
-                    </button>
-                  ))}
+                    { id: 'cards', icon: '📋', label: 'Karty', requiredFeature: null },
+                    { id: 'timeline', icon: '📅', label: 'Timeline (Gantt)', requiredFeature: 'ganttCharts' },
+                    { id: 'kanban', icon: '📌', label: 'Kanban', requiredFeature: 'collaboration' },
+                    { id: 'analytics', icon: '📊', label: 'Analityka', requiredFeature: null }
+                  ].map((mode) => {
+                    const isAccessible = !mode.requiredFeature || canEnableFeature(mode.requiredFeature as keyof typeof userPlan.features);
+                    
+                    return (
+                      <div key={mode.id} className="relative group">
+                        <button
+                          onClick={() => isAccessible ? setViewMode(mode.id as any) : setShowUpgradeModal(true)}
+                          disabled={!isAccessible}
+                          className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                            viewMode === mode.id && isAccessible
+                              ? 'bg-white text-purple-600 shadow-sm'
+                              : isAccessible
+                              ? 'text-gray-600 hover:text-gray-900'
+                              : 'text-gray-400 cursor-not-allowed'
+                          }`}
+                        >
+                          <span>{mode.icon}</span>
+                          <span>{mode.label}</span>
+                          {!isAccessible && <span className="text-xs">🔒</span>}
+                        </button>
+                        
+                        {!isAccessible && (
+                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-64 bg-black bg-opacity-90 text-white text-xs rounded-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
+                            Funkcja dostępna w wyższych planach
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 

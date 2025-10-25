@@ -343,7 +343,7 @@ Modern, customizable CRM solution for businesses of all sizes with AI-powered fe
 | ------------------ | ----------------- | ---------------------- | -------------------------- | --------------------- |
 | **💰 Price**       | `49 PLN/miesiąc`  | `149 PLN/miesiąc`      | `299 PLN/miesiąc`          | `599 PLN/miesiąc`     |
 | **🎯 Target**      | JDG, Freelancerzy | Małe firmy (3-10 osób) | Średnie firmy (10-50 osób) | Korporacje (50+ osób) |
-| **👥 Users Limit** | `2 użytkowników`  | `10 użytkowników`      | `50 użytkowników`          | `Unlimited`           |
+| **👥 Users Limit** | `2 użytkowników`  | `5 użytkowników`       | `50 użytkowników`          | `Unlimited`           |
 | **💾 Storage**     | `1 GB`            | `10 GB`                | `100 GB`                   | `1 TB`                |
 
 ### **🎯 Core Modules Availability**
