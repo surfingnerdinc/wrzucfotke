@@ -30,9 +30,9 @@ interface GalleryPhoto {
 // GET /api/gallery/public/[folderId] - Pobierz publiczną galerię
 export async function GET(
   request: NextRequest,
-  { params }: { params: { folderId: string } }
+  { params }: { params: Promise<{ folderId: string }> }
 ) {
-  const { folderId } = params;
+  const { folderId } = await params;
 
   try {
     // Tutaj będzie logika pobierania danych z bazy danych
@@ -123,9 +123,9 @@ export async function GET(
 // POST /api/gallery/public/[folderId] - Track guest interaction
 export async function POST(
   request: NextRequest,
-  { params }: { params: { folderId: string } }
+  { params }: { params: Promise<{ folderId: string }> }
 ) {
-  const { folderId } = params;
+  const { folderId } = await params;
 
   try {
     const body = await request.json();

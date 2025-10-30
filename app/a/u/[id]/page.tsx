@@ -21,17 +21,18 @@ import {
 import Link from 'next/link';
 
 interface UserDetailsPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
-export default function UserDetailsPage({ params }: UserDetailsPageProps) {
+export default async function UserDetailsPage({ params }: UserDetailsPageProps) {
+  const { id } = await params;
   const [isEditing, setIsEditing] = useState(false);
   
   // Mock user data - normally would fetch by ID
   const user = {
-    id: params.id || 'USR-001',
+    id: id || 'USR-001',
     name: 'Anna Kowalska',
     email: 'anna.kowalska@example.com',
     phone: '+48 123 456 789',

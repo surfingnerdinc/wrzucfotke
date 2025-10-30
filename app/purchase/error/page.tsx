@@ -1,3 +1,5 @@
+'use client';
+
 import { XCircleIcon, ArrowPathIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 
 export default function PurchaseErrorPage() {

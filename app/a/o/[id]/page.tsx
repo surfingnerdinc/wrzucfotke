@@ -17,17 +17,18 @@ import {
 import Link from 'next/link';
 
 interface OrderDetailsPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
-export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
+export default async function OrderDetailsPage({ params }: OrderDetailsPageProps) {
+  const { id } = await params;
   const [orderStatus, setOrderStatus] = useState('pending');
   
   // Mock order data - normally would fetch by ID
   const order = {
-    id: params.id || 'WF-2025-001267',
+    id: id || 'WF-2025-001267',
     customer: 'Anna Kowalska',
     email: 'anna.kowalska@example.com',
     phone: '+48 123 456 789',
