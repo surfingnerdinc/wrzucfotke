@@ -171,7 +171,7 @@ export default function GuestGalleryPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
+          <div className="w-16 h-16 bg-linear-to-r from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
             <PhotoIcon className="w-8 h-8 text-white" />
           </div>
           <div className="text-lg font-medium text-gray-900 mb-2">Ładowanie galerii...</div>
@@ -210,7 +210,7 @@ export default function GuestGalleryPage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
           <div className="text-center">
             <div className="flex items-center justify-center mb-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center mr-3">
+              <div className="w-12 h-12 bg-linear-to-r from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center mr-3">
                 <HeartIcon className="w-6 h-6 text-white" />
               </div>
               <div className="text-sm text-gray-500 font-medium">WrzućFotkę.pl</div>
@@ -378,7 +378,7 @@ export default function GuestGalleryPage() {
       <div className="bg-white border-t border-gray-200 mt-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 text-center">
           <div className="flex items-center justify-center mb-4">
-            <div className="w-8 h-8 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center mr-2">
+            <div className="w-8 h-8 bg-linear-to-r from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center mr-2">
               <HeartIcon className="w-4 h-4 text-white" />
             </div>
             <span className="text-lg font-bold text-gray-900">WrzućFotkę.pl</span>

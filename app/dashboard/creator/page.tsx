@@ -1,1461 +1,970 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { 
-  DocumentIcon,
-  PhotoIcon,
-  QrCodeIcon,
-  PaintBrushIcon,
   DocumentArrowDownIcon,
-  EyeIcon,
-  SwatchIcon,
-  PlusIcon,
   TrashIcon,
   ArrowPathIcon,
-  XMarkIcon,
-  ArrowUturnLeftIcon,
-  ChevronRightIcon
+  XMarkIcon
 } from '@heroicons/react/24/outline';
+import EditorToolbar from '@/app/components/editor/EditorToolbar';
+import AIDesignAssistant from '@/app/components/editor/AIDesignAssistant';
+import CanvasControls from '@/app/components/editor/CanvasControls';
+import SideSwitcher from '@/app/components/editor/SideSwitcher';
+import PropertiesPanel from '@/app/components/editor/PropertiesPanel';
+import CanvasRenderer from '@/app/components/editor/CanvasRenderer';
+import { useCanvasState } from '@/app/hooks/useCanvasState';
+import { useKeyboardShortcuts } from '@/app/hooks/useKeyboardShortcuts';
 
-interface PrintSize {
-  id: string;
-  name: string;
-  description: string;
-  dimensions: {
-    width: number;
-    height: number;
-    unit: 'mm' | 'px';
-  };
-  dpi: number;
-  category: 'card' | 'document' | 'poster';
-  icon: string;
-  maxTextLength: {
-    title: number;
-    subtitle: number;
-    description: number;
-  };
+// Fabric.js types
+interface FabricCanvas {
+  add: (object: any) => void;
+  remove: (object: any) => void;
+  clear: () => void;
+  dispose: () => void;
+  getActiveObject: () => any;
+  discardActiveObject: () => void;
+  renderAll: () => void;
+  toDataURL: (options?: any) => string;
+  setBackgroundColor: (color: string, callback?: () => void) => void;
+  setWidth: (width: number) => void;
+  setHeight: (height: number) => void;
+  getObjects: () => any[];
+  bringToFront: (object: any) => void;
+  sendToBack: (object: any) => void;
+  on: (event: string, callback: (e: any) => void) => void;
+  setActiveObject: (object: any) => void;
 }
 
-interface Template {
-  id: string;
-  name: string;
-  description: string;
-  preview: string;
-  style: 'elegant' | 'modern' | 'vintage' | 'minimal';
-  supportedSizes: string[];
-}
-
-interface Layout {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  sections: {
-    id: string;
-    name: string;
-    type: 'text' | 'qr' | 'image' | 'mixed';
-    position: 'left' | 'right' | 'top' | 'bottom' | 'center' | 'full';
-    size: number; // percentage
-  }[];
-  supportedSizes: string[];
-}
-
-interface SectionContent {
-  sectionId: string;
-  title?: string;
-  subtitle?: string;
-  description?: string;
-  qrText?: string;
-  image?: string;
-}
-
-interface CreatorState {
-  currentStep: 'size' | 'template' | 'layout' | 'content';
-  selectedSize: PrintSize | null;
-  selectedTemplate: Template | null;
-  selectedLayout: Layout | null;
-  orientation: 'portrait' | 'landscape';
-  sectionContents: SectionContent[];
-  title: string;
-  subtitle: string;
-  description: string;
-  qrCodeText: string;
-  backgroundColor: string;
-  textColor: string;
-  accentColor: string;
-  logo: string | null;
+declare global {
+  interface Window {
+    fabric: any;
+  }
 }
 
 export default function CreatorPage() {
-  const [creatorState, setCreatorState] = useState<CreatorState>({
-    currentStep: 'size',
-    selectedSize: null,
-    selectedTemplate: null,
-    selectedLayout: null,
-    orientation: 'portrait',
-    sectionContents: [],
-    title: 'Wesele Ania & Tomek',
-    subtitle: '15 czerwca 2024',
-    description: 'Skanuj kod QR aby dodać swoje zdjęcia z naszego wesela!',
-    qrCodeText: 'https://wrzucfotke.pl/gallery/12345',
-    backgroundColor: '#ffffff',
-    textColor: '#1f2937',
-    accentColor: '#6366f1',
-    logo: null
-  });
-
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [previewMode, setPreviewMode] = useState(false);
+  const canvasRef = useRef<FabricCanvas | null>(null);
+  const canvasElementRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Use custom hooks
+  const {
+    editorState,
+    setEditorState,
+    selectedObject,
+    setSelectedObject,
+    canvasData,
+    setCanvasData,
+    canvasDataRef,
+    currentSideRef,
+    canvasSize,
+    getCanvasSize,
+    calculateOptimalZoom,
+    updateCanvasData
+  } = useCanvasState();
 
-  const printSizes: PrintSize[] = [
-    {
-      id: 'business-card',
-      name: 'Wizytówka',
-      description: '85×55mm - standardowa wizytówka',
-      dimensions: { width: 85, height: 55, unit: 'mm' },
-      dpi: 300,
-      category: 'card',
-      icon: '💳',
-      maxTextLength: { title: 30, subtitle: 25, description: 80 }
-    },
-    {
-      id: 'postcard',
-      name: 'Pocztówka',
-      description: '148×105mm - A6 landscape',
-      dimensions: { width: 148, height: 105, unit: 'mm' },
-      dpi: 300,
-      category: 'card',
-      icon: '📮',
-      maxTextLength: { title: 40, subtitle: 35, description: 120 }
-    },
-    {
-      id: 'a5',
-      name: 'A5',
-      description: '148×210mm - mała ulotka',
-      dimensions: { width: 148, height: 210, unit: 'mm' },
-      dpi: 300,
-      category: 'document',
-      icon: '📄',
-      maxTextLength: { title: 50, subtitle: 40, description: 200 }
-    },
-    {
-      id: 'a4',
-      name: 'A4',
-      description: '210×297mm - standardowa kartka',
-      dimensions: { width: 210, height: 297, unit: 'mm' },
-      dpi: 300,
-      category: 'document',
-      icon: '📋',
-      maxTextLength: { title: 60, subtitle: 50, description: 300 }
-    },
-    {
-      id: 'a3',
-      name: 'A3 Plakat',
-      description: '297×420mm - mały plakat',
-      dimensions: { width: 297, height: 420, unit: 'mm' },
-      dpi: 300,
-      category: 'poster',
-      icon: '🖼️',
-      maxTextLength: { title: 40, subtitle: 35, description: 150 }
-    },
-    {
-      id: 'a2',
-      name: 'A2 Plakat',
-      description: '420×594mm - duży plakat',
-      dimensions: { width: 420, height: 594, unit: 'mm' },
-      dpi: 300,
-      category: 'poster',
-      icon: '🎪',
-      maxTextLength: { title: 35, subtitle: 30, description: 120 }
-    },
-    {
-      id: 'a1',
-      name: 'A1 Plakat',
-      description: '594×841mm - bardzo duży plakat',
-      dimensions: { width: 594, height: 841, unit: 'mm' },
-      dpi: 300,
-      category: 'poster',
-      icon: '🎭',
-      maxTextLength: { title: 25, subtitle: 20, description: 80 }
+  // Initialize Fabric.js canvas
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js';
+    script.async = true;
+    
+    script.onload = () => {
+      if (window.fabric && canvasElementRef.current) {
+        const size = getCanvasSize(editorState.canvasSize, editorState.orientation);
+        
+        const canvas = new window.fabric.Canvas(canvasElementRef.current, {
+          width: size.width,
+          height: size.height,
+          backgroundColor: editorState.backgroundColor,
+        });
+
+        canvasRef.current = canvas;
+
+        // Add default text based on canvas size
+        const isBusinessCard = editorState.canvasSize === 'BusinessCard';
+        const defaultText = new window.fabric.Textbox(
+          isBusinessCard ? 'Jan Kowalski' : 'Mój Plakat', 
+          {
+            left: isBusinessCard ? 20 : 100,
+            top: isBusinessCard ? 30 : 100,
+            fontSize: isBusinessCard ? 16 : 48,
+            fontFamily: 'Arial',
+            fill: '#333333',
+            width: isBusinessCard ? 200 : 400,
+          }
+        );
+        canvas.add(defaultText);
+        
+        // Add subtitle for business card
+        if (isBusinessCard) {
+          const subtitle = new window.fabric.Textbox('Grafik', {
+            left: 20,
+            top: 60,
+            fontSize: 12,
+            fontFamily: 'Arial',
+            fill: '#666666',
+            width: 150,
+          });
+          canvas.add(subtitle);
+          
+          const contact = new window.fabric.Textbox('tel: 123 456 789\nemail@example.com', {
+            left: 20,
+            top: 120,
+            fontSize: 10,
+            fontFamily: 'Arial',
+            fill: '#888888',
+            width: 200,
+          });
+          canvas.add(contact);
+        }
+
+        // Object selection events
+        canvas.on('selection:created', (e: any) => {
+          setSelectedObject(e.selected[0]);
+        });
+
+        canvas.on('selection:updated', (e: any) => {
+          setSelectedObject(e.selected[0]);
+        });
+
+        canvas.on('selection:cleared', () => {
+          setSelectedObject(null);
+        });
+
+        // Auto-save when objects are modified
+        const saveHandler = () => {
+          setTimeout(() => {
+            if (!canvasRef.current) return;
+            const currentObjects = canvasRef.current.getObjects();
+            canvasDataRef.current = {
+              ...canvasDataRef.current,
+              [currentSideRef.current]: currentObjects.map(obj => obj.toObject())
+            };
+            setCanvasData({...canvasDataRef.current});
+          }, 100);
+        };
+
+        canvas.on('object:modified', saveHandler);
+        canvas.on('object:added', saveHandler);
+        canvas.on('object:removed', saveHandler);
+      }
+    };
+
+    document.head.appendChild(script);
+
+    return () => {
+      if (canvasRef.current) {
+        canvasRef.current.dispose();
+      }
+      document.head.removeChild(script);
+    };
+  }, []);
+
+  // Update canvas size when changed
+  useEffect(() => {
+    if (canvasRef.current) {
+      const size = getCanvasSize(editorState.canvasSize, editorState.orientation);
+      canvasRef.current.setWidth(size.width);
+      canvasRef.current.setHeight(size.height);
+      canvasRef.current.renderAll();
     }
-  ];
+  }, [editorState.canvasSize, editorState.orientation]);
 
-  const templates: Template[] = [
-    {
-      id: 'elegant',
-      name: 'Elegancki',
-      description: 'Klasyczny design z delikatnymi ornamentami',
-      preview: '🎩',
-      style: 'elegant',
-      supportedSizes: ['business-card', 'postcard', 'a5', 'a4', 'a3']
-    },
-    {
-      id: 'modern',
-      name: 'Nowoczesny',
-      description: 'Minimalistyczny design z czystymi liniami',
-      preview: '💎',
-      style: 'modern',
-      supportedSizes: ['business-card', 'postcard', 'a5', 'a4', 'a3', 'a2', 'a1']
-    },
-    {
-      id: 'vintage',
-      name: 'Vintage',
-      description: 'Retro styl z ciepłymi kolorami',
-      preview: '📜',
-      style: 'vintage',
-      supportedSizes: ['postcard', 'a5', 'a4', 'a3']
-    },
-    {
-      id: 'minimal',
-      name: 'Minimalistyczny',
-      description: 'Czysty design z dużą ilością białej przestrzeni',
-      preview: '⚪',
-      style: 'minimal',
-      supportedSizes: ['business-card', 'postcard', 'a5', 'a4', 'a3', 'a2', 'a1']
+  // Update canvas background
+  useEffect(() => {
+    if (canvasRef.current) {
+      canvasRef.current.setBackgroundColor(editorState.backgroundColor, () => {
+        canvasRef.current?.renderAll();
+      });
+      
+      // Update canvas data with new background
+      canvasDataRef.current = {
+        ...canvasDataRef.current,
+        [`${editorState.currentSide}Background`]: editorState.backgroundColor
+      };
+      
+      setCanvasData({
+        ...canvasDataRef.current
+      });
     }
-  ];
+  }, [editorState.backgroundColor, editorState.currentSide]);
 
-  const layouts: Layout[] = [
-    // Simple full-width layouts for cards
-    {
-      id: 'single-full',
-      name: 'Pełny',
-      description: 'Jedna sekcja na całej powierzchni',
-      icon: '⬜',
-      sections: [
-        { id: 'main', name: 'Główna sekcja', type: 'mixed', position: 'full', size: 100 }
-      ],
-      supportedSizes: ['business-card', 'postcard']
-    },
+  // Tool functions
+  const addText = () => {
+    if (!canvasRef.current) return;
     
-    // A5 and larger formats - multiple layout options
-    {
-      id: 'split-horizontal',
-      name: 'Podział poziomy',
-      description: 'Góra i dół - idealne na tytuł i treść',
-      icon: '⬛',
-      sections: [
-        { id: 'top', name: 'Górna sekcja', type: 'text', position: 'top', size: 40 },
-        { id: 'bottom', name: 'Dolna sekcja', type: 'mixed', position: 'bottom', size: 60 }
-      ],
-      supportedSizes: ['a5', 'a4', 'a3', 'a2', 'a1']
-    },
+    const isBusinessCard = editorState.canvasSize === 'BusinessCard';
+    const currentCanvasSize = getCanvasSize(editorState.canvasSize, editorState.orientation);
     
-    {
-      id: 'split-vertical',
-      name: 'Podział pionowy',
-      description: 'Lewa i prawa strona - tekst z QR kodem',
-      icon: '◼️',
-      sections: [
-        { id: 'left', name: 'Lewa sekcja', type: 'text', position: 'left', size: 60 },
-        { id: 'right', name: 'Prawa sekcja', type: 'qr', position: 'right', size: 40 }
-      ],
-      supportedSizes: ['a5', 'a4', 'a3', 'a2', 'a1']
-    },
+    const text = new window.fabric.Textbox('Nowy tekst', {
+      left: Math.random() * (currentCanvasSize.width * 0.5) + 20,
+      top: Math.random() * (currentCanvasSize.height * 0.5) + 20,
+      fontSize: isBusinessCard ? 12 : 24,
+      fontFamily: 'Arial',
+      fill: '#333333',
+      width: isBusinessCard ? 150 : 200,
+    });
     
-    {
-      id: 'thirds-horizontal',
-      name: 'Trzy poziome',
-      description: 'Nagłówek, treść i stopka',
-      icon: '▦',
-      sections: [
-        { id: 'header', name: 'Nagłówek', type: 'text', position: 'top', size: 25 },
-        { id: 'content', name: 'Treść główna', type: 'text', position: 'center', size: 50 },
-        { id: 'footer', name: 'Stopka z QR', type: 'qr', position: 'bottom', size: 25 }
-      ],
-      supportedSizes: ['a4', 'a3', 'a2', 'a1']
-    },
-    
-    {
-      id: 'asymmetric',
-      name: 'Asymetryczny',
-      description: 'Duża lewa sekcja i mała prawa',
-      icon: '▬',
-      sections: [
-        { id: 'main', name: 'Główna treść', type: 'text', position: 'left', size: 70 },
-        { id: 'sidebar', name: 'Panel boczny', type: 'mixed', position: 'right', size: 30 }
-      ],
-      supportedSizes: ['a4', 'a3', 'a2', 'a1']
-    },
-    
-    {
-      id: 'center-focus',
-      name: 'Centralny fokus',
-      description: 'Centrum z marginesami po bokach',
-      icon: '◊',
-      sections: [
-        { id: 'left-margin', name: 'Lewa strona', type: 'image', position: 'left', size: 20 },
-        { id: 'center', name: 'Centrum', type: 'mixed', position: 'center', size: 60 },
-        { id: 'right-margin', name: 'Prawa strona', type: 'qr', position: 'right', size: 20 }
-      ],
-      supportedSizes: ['a3', 'a2', 'a1']
-    }
-  ];
-
-  const updateCreatorState = (updates: Partial<CreatorState>) => {
-    setCreatorState(prev => ({ ...prev, ...updates }));
+    canvasRef.current.add(text);
+    canvasRef.current.setActiveObject(text);
   };
 
-  const goToNextStep = () => {
-    if (creatorState.currentStep === 'size' && creatorState.selectedSize) {
-      updateCreatorState({ currentStep: 'template' });
-    } else if (creatorState.currentStep === 'template' && creatorState.selectedTemplate) {
-      updateCreatorState({ currentStep: 'layout' });
-    } else if (creatorState.currentStep === 'layout' && creatorState.selectedLayout) {
-      // Initialize section contents based on selected layout
-      const initialContents = creatorState.selectedLayout.sections.map(section => ({
-        sectionId: section.id,
-        title: section.type === 'text' || section.type === 'mixed' ? 'Tytuł sekcji' : undefined,
-        subtitle: section.type === 'text' || section.type === 'mixed' ? 'Podtytuł' : undefined,
-        description: section.type === 'text' || section.type === 'mixed' ? 'Opis zawartości tej sekcji...' : undefined,
-        qrText: section.type === 'qr' || section.type === 'mixed' ? 'https://wrzucfotke.pl/gallery/12345' : undefined,
-      }));
-      updateCreatorState({ currentStep: 'content', sectionContents: initialContents });
-    }
-  };
-
-  const goToPreviousStep = () => {
-    if (creatorState.currentStep === 'content') {
-      updateCreatorState({ currentStep: 'layout' });
-    } else if (creatorState.currentStep === 'layout') {
-      updateCreatorState({ currentStep: 'template' });
-    } else if (creatorState.currentStep === 'template') {
-      updateCreatorState({ currentStep: 'size' });
-    }
-  };
-
-  const resetCreator = () => {
-    setCreatorState({
-      currentStep: 'size',
-      selectedSize: null,
-      selectedTemplate: null,
-      selectedLayout: null,
-      orientation: 'portrait',
-      sectionContents: [],
-      title: 'Wesele Ania & Tomek',
-      subtitle: '15 czerwca 2024',
-      description: 'Skanuj kod QR aby dodać swoje zdjęcia z naszego wesela!',
-      qrCodeText: 'https://wrzucfotke.pl/gallery/12345',
-      backgroundColor: '#ffffff',
-      textColor: '#1f2937',
-      accentColor: '#6366f1',
-      logo: null
+  const addImage = (imageUrl: string) => {
+    if (!canvasRef.current) return;
+    
+    const isBusinessCard = editorState.canvasSize === 'BusinessCard';
+    
+    window.fabric.Image.fromURL(imageUrl, (img: any) => {
+      img.set({
+        left: isBusinessCard ? 200 : 100,
+        top: isBusinessCard ? 20 : 100,
+        scaleX: isBusinessCard ? 0.2 : 0.5,
+        scaleY: isBusinessCard ? 0.2 : 0.5,
+      });
+      canvasRef.current?.add(img);
     });
   };
 
-  const getAvailableTemplates = () => {
-    if (!creatorState.selectedSize) return [];
-    return templates.filter(template => 
-      template.supportedSizes.includes(creatorState.selectedSize!.id)
-    );
-  };
-
-  const getAvailableLayouts = () => {
-    if (!creatorState.selectedSize) return [];
-    return layouts.filter(layout => 
-      layout.supportedSizes.includes(creatorState.selectedSize!.id)
-    );
-  };
-
-  const updateSectionContent = (sectionId: string, updates: Partial<SectionContent>) => {
-    const newContents = creatorState.sectionContents.map(content => 
-      content.sectionId === sectionId 
-        ? { ...content, ...updates }
-        : content
-    );
-    updateCreatorState({ sectionContents: newContents });
-  };
-
-  const getSectionContent = (sectionId: string): SectionContent | undefined => {
-    return creatorState.sectionContents.find(content => content.sectionId === sectionId);
-  };
-
-  const getCurrentDimensions = () => {
-    if (!creatorState.selectedSize) return null;
-    
-    const { width, height, unit } = creatorState.selectedSize.dimensions;
-    return creatorState.orientation === 'landscape' 
-      ? { width: Math.max(width, height), height: Math.min(width, height), unit }
-      : { width: Math.min(width, height), height: Math.max(width, height), unit };
-  };
-
-  const canChangeOrientation = () => {
-    return creatorState.selectedSize?.category !== 'card'; // Wizytówki mają stałą orientację
-  };
-
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        updateCreatorState({ logo: e.target?.result as string });
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        addImage(event.target.result as string);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const addQRCode = () => {
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent('https://wrzucfotke.pl/gallery/12345')}`;
+    addImage(qrUrl);
+  };
+
+  const addShape = (shapeType: 'rectangle' | 'circle' | 'triangle' | 'line' | 'horizontal-line' | 'vertical-line') => {
+    if (!canvasRef.current) return;
+    
+    const isBusinessCard = editorState.canvasSize === 'BusinessCard';
+    const currentCanvasSize = getCanvasSize(editorState.canvasSize, editorState.orientation);
+    const size = isBusinessCard ? 50 : 100;
+    const x = Math.random() * (currentCanvasSize.width - size) + 20;
+    const y = Math.random() * (currentCanvasSize.height - size) + 20;
+
+    let shape: any;
+
+    switch (shapeType) {
+      case 'rectangle':
+        shape = new window.fabric.Rect({
+          left: x,
+          top: y,
+          width: size,
+          height: size * 0.6,
+          fill: '#4F46E5',
+          stroke: '#374151',
+          strokeWidth: 1,
+        });
+        break;
+        
+      case 'circle':
+        shape = new window.fabric.Circle({
+          left: x,
+          top: y,
+          radius: size / 2,
+          fill: '#EF4444',
+          stroke: '#374151',
+          strokeWidth: 1,
+        });
+        break;
+        
+      case 'triangle':
+        shape = new window.fabric.Triangle({
+          left: x,
+          top: y,
+          width: size,
+          height: size,
+          fill: '#10B981',
+          stroke: '#374151',
+          strokeWidth: 1,
+        });
+        break;
+        
+      case 'line':
+        shape = new window.fabric.Line([x, y, x + size, y + size * 0.5], {
+          stroke: '#374151',
+          strokeWidth: 3,
+          selectable: true,
+        });
+        break;
+        
+      case 'horizontal-line':
+        shape = new window.fabric.Line([x, y, x + size, y], {
+          stroke: '#374151',
+          strokeWidth: 3,
+          selectable: true,
+        });
+        break;
+        
+      case 'vertical-line':
+        shape = new window.fabric.Line([x, y, x, y + size], {
+          stroke: '#374151',
+          strokeWidth: 3,
+          selectable: true,
+        });
+        break;
+    }
+
+    if (shape) {
+      canvasRef.current.add(shape);
+      canvasRef.current.setActiveObject(shape);
     }
   };
 
-  const generateQRCode = async (text: string): Promise<string> => {
-    // Prosta implementacja QR kodu - w prawdziwej aplikacji użyj biblioteki jak 'qrcode'
-    return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(text)}`;
+  const deleteSelected = () => {
+    if (canvasRef.current && selectedObject) {
+      canvasRef.current.remove(selectedObject);
+      setSelectedObject(null);
+    }
   };
 
-  const generatePDF = async () => {
-    if (!creatorState.selectedTemplate || !creatorState.selectedSize) return;
+  const clearCanvas = () => {
+    if (canvasRef.current) {
+      canvasRef.current.clear();
+    }
+  };
 
-    setIsGenerating(true);
+  const bringToFront = () => {
+    if (canvasRef.current && selectedObject) {
+      canvasRef.current.bringToFront(selectedObject);
+      canvasRef.current.renderAll();
+    }
+  };
+
+  const sendToBack = () => {
+    if (canvasRef.current && selectedObject) {
+      canvasRef.current.sendToBack(selectedObject);
+      canvasRef.current.renderAll();
+    }
+  };
+
+  const duplicateSelected = () => {
+    if (!canvasRef.current || !selectedObject) return;
+    
+    selectedObject.clone((cloned: any) => {
+      cloned.set({
+        left: selectedObject.left + 20,
+        top: selectedObject.top + 20,
+      });
+      canvasRef.current?.add(cloned);
+      canvasRef.current?.setActiveObject(cloned);
+    });
+  };
+
+  const toggleVisibility = () => {
+    if (!selectedObject) return;
+    
+    selectedObject.set('visible', !selectedObject.visible);
+    canvasRef.current?.renderAll();
+  };
+
+  const toggleLock = () => {
+    if (!selectedObject) return;
+    
+    const isLocked = selectedObject.lockMovementX;
+    selectedObject.set({
+      lockMovementX: !isLocked,
+      lockMovementY: !isLocked,
+      lockRotation: !isLocked,
+      lockScalingX: !isLocked,
+      lockScalingY: !isLocked,
+      selectable: isLocked
+    });
+    canvasRef.current?.renderAll();
+  };
+
+  const changeBackground = (color: string) => {
+    setEditorState(prev => ({ ...prev, backgroundColor: color }));
+  };
+
+  // Save current canvas state to memory
+  const saveCurrentCanvasState = () => {
+    if (!canvasRef.current) return;
+    
+    const currentObjects = canvasRef.current.getObjects();
+    const currentBg = editorState.backgroundColor;
+    
+    canvasDataRef.current = {
+      ...canvasDataRef.current,
+      [editorState.currentSide]: currentObjects.map(obj => obj.toObject()),
+      [`${editorState.currentSide}Background`]: currentBg
+    };
+    
+    setCanvasData({
+      ...canvasDataRef.current
+    });
+  };
+
+  // Load canvas state from memory
+  const loadCanvasState = (side: 'front' | 'back') => {
+    if (!canvasRef.current || !window.fabric) return;
+    
+    // Save current state before switching
+    if (canvasRef.current) {
+      const currentObjects = canvasRef.current.getObjects();
+      const currentBg = editorState.backgroundColor;
+      
+      canvasDataRef.current = {
+        ...canvasDataRef.current,
+        [editorState.currentSide]: currentObjects.map(obj => obj.toObject()),
+        [`${editorState.currentSide}Background`]: currentBg
+      };
+    }
+    
+    // Clear canvas
+    canvasRef.current.clear();
+    
+    // Load objects for the selected side
+    const objectsData = canvasDataRef.current[side];
+    const backgroundColor = canvasDataRef.current[`${side}Background` as keyof typeof canvasDataRef.current] as string;
+    
+    // Set background
+    canvasRef.current.setBackgroundColor(backgroundColor, () => {
+      canvasRef.current?.renderAll();
+    });
+    
+    // Update editor state background
+    setEditorState(prev => ({ ...prev, backgroundColor }));
+    
+    // Add objects
+    objectsData.forEach((objData: any) => {
+      window.fabric.util.enlivenObjects([objData], (objects: any[]) => {
+        objects.forEach(obj => {
+          if (canvasRef.current) {
+            canvasRef.current.add(obj);
+          }
+        });
+        canvasRef.current?.renderAll();
+      });
+    });
+  };
+
+  // Switch between front and back
+  const switchSide = (side: 'front' | 'back') => {
+    if (side === editorState.currentSide) return;
+    
+    loadCanvasState(side);
+    setEditorState(prev => ({ ...prev, currentSide: side }));
+    setSelectedObject(null);
+  };
+
+  // Add divider lines to split the canvas
+  const addDivider = (type: '2h' | '2v' | '3h' | '3v' | '4grid' | '3left' | '3right' | '3leftH' | '3rightH') => {
+    if (!canvasRef.current) return;
+    
+    const currentCanvasSize = getCanvasSize(editorState.canvasSize, editorState.orientation);
+    const { width, height } = currentCanvasSize;
+    
+    // Style for divider lines
+    const lineStyle = {
+      stroke: '#8B5CF6',
+      strokeWidth: 1,
+      strokeDashArray: [5, 5],
+      selectable: true,
+      opacity: 0.7
+    };
+
+    switch (type) {
+      case '2h': // Horizontal split
+        const hLine = new window.fabric.Line([0, height / 2, width, height / 2], {
+          ...lineStyle,
+          name: 'divider-2h'
+        });
+        canvasRef.current.add(hLine);
+        break;
+        
+      case '2v': // Vertical split
+        const vLine = new window.fabric.Line([width / 2, 0, width / 2, height], {
+          ...lineStyle,
+          name: 'divider-2v'
+        });
+        canvasRef.current.add(vLine);
+        break;
+        
+      case '3h': // Three horizontal sections
+        const h1Line = new window.fabric.Line([0, height / 3, width, height / 3], {
+          ...lineStyle,
+          name: 'divider-3h-1'
+        });
+        const h2Line = new window.fabric.Line([0, (height / 3) * 2, width, (height / 3) * 2], {
+          ...lineStyle,
+          name: 'divider-3h-2'
+        });
+        canvasRef.current.add(h1Line);
+        canvasRef.current.add(h2Line);
+        break;
+        
+      case '3v': // Three vertical sections
+        const v1Line = new window.fabric.Line([width / 3, 0, width / 3, height], {
+          ...lineStyle,
+          name: 'divider-3v-1'
+        });
+        const v2Line = new window.fabric.Line([(width / 3) * 2, 0, (width / 3) * 2, height], {
+          ...lineStyle,
+          name: 'divider-3v-2'
+        });
+        canvasRef.current.add(v1Line);
+        canvasRef.current.add(v2Line);
+        break;
+        
+      case '3left': // Left half split into two
+        const leftLine = new window.fabric.Line([width / 2, 0, width / 2, height], {
+          ...lineStyle,
+          name: 'divider-3left-main'
+        });
+        const leftSplit = new window.fabric.Line([width / 4, 0, width / 4, height], {
+          ...lineStyle,
+          name: 'divider-3left-split'
+        });
+        canvasRef.current.add(leftLine);
+        canvasRef.current.add(leftSplit);
+        break;
+        
+      case '3right': // Right half split into two
+        const rightLine = new window.fabric.Line([width / 2, 0, width / 2, height], {
+          ...lineStyle,
+          name: 'divider-3right-main'
+        });
+        const rightSplit = new window.fabric.Line([(width / 4) * 3, 0, (width / 4) * 3, height], {
+          ...lineStyle,
+          name: 'divider-3right-split'
+        });
+        canvasRef.current.add(rightLine);
+        canvasRef.current.add(rightSplit);
+        break;
+        
+      case '3leftH': // Left half split horizontally + right full
+        const leftHMain = new window.fabric.Line([width / 2, 0, width / 2, height], {
+          ...lineStyle,
+          name: 'divider-3leftH-main'
+        });
+        const leftHSplit = new window.fabric.Line([0, height / 2, width / 2, height / 2], {
+          ...lineStyle,
+          name: 'divider-3leftH-split'
+        });
+        canvasRef.current.add(leftHMain);
+        canvasRef.current.add(leftHSplit);
+        break;
+        
+      case '3rightH': // Right half split horizontally + left full
+        const rightHMain = new window.fabric.Line([width / 2, 0, width / 2, height], {
+          ...lineStyle,
+          name: 'divider-3rightH-main'
+        });
+        const rightHSplit = new window.fabric.Line([width / 2, height / 2, width, height / 2], {
+          ...lineStyle,
+          name: 'divider-3rightH-split'
+        });
+        canvasRef.current.add(rightHMain);
+        canvasRef.current.add(rightHSplit);
+        break;
+        
+      case '4grid': // 2x2 grid
+        const gridH = new window.fabric.Line([0, height / 2, width, height / 2], {
+          ...lineStyle,
+          name: 'divider-4grid-h'
+        });
+        const gridV = new window.fabric.Line([width / 2, 0, width / 2, height], {
+          ...lineStyle,
+          name: 'divider-4grid-v'
+        });
+        canvasRef.current.add(gridH);
+        canvasRef.current.add(gridV);
+        break;
+    }
+    
+    canvasRef.current.renderAll();
+  };
+
+  // Export to PDF functionality
+  const exportToPDF = async () => {
+    if (!canvasRef.current) return;
+    
+    setEditorState(prev => ({ ...prev, isGenerating: true }));
     
     try {
-      const qrCodeUrl = await generateQRCode(creatorState.qrCodeText);
+      saveCurrentCanvasState();
       
-      const htmlContent = await generateHTMLTemplate(qrCodeUrl);
+      const shouldExportBothSides = (editorState.canvasSize === 'BusinessCard' || editorState.canvasSize === 'A4') && 
+                                   (canvasDataRef.current.front.length > 0 || canvasDataRef.current.back.length > 0);
       
-      const currentDimensions = getCurrentDimensions();
-      
-      const response = await fetch('/api/generate-pdf', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          html: htmlContent,
-          filename: `${creatorState.selectedSize.name.toLowerCase()}-${creatorState.orientation}-${creatorState.selectedTemplate.id}-${Date.now()}.pdf`,
-          size: {
-            ...creatorState.selectedSize,
-            dimensions: currentDimensions || creatorState.selectedSize.dimensions
+      if (shouldExportBothSides) {
+        const frontDataURL = await generateSideImage('front');
+        const backDataURL = await generateSideImage('back');
+        
+        const response = await fetch('/api/generate-pdf', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
           },
-          orientation: creatorState.orientation
-        }),
-      });
+          body: JSON.stringify({
+            frontImageData: frontDataURL,
+            backImageData: backDataURL,
+            size: editorState.canvasSize,
+            orientation: editorState.orientation,
+            doubleSided: true,
+            filename: `${editorState.canvasSize === 'BusinessCard' ? 'wizytowka' : 'dokument'}-dwustronna-${Date.now()}.pdf`
+          }),
+        });
 
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = `${creatorState.selectedSize.name}-${creatorState.selectedTemplate.name}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+        if (response.ok) {
+          const blob = await response.blob();
+          downloadBlob(blob, `${editorState.canvasSize === 'BusinessCard' ? 'wizytowka' : 'dokument'}-dwustronna.pdf`);
+        }
       } else {
-        console.error('Failed to generate PDF');
+        const dataURL = canvasRef.current.toDataURL({
+          format: 'png',
+          quality: 1,
+          multiplier: 2
+        });
+
+        const response = await fetch('/api/generate-pdf', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            imageData: dataURL,
+            size: editorState.canvasSize,
+            orientation: editorState.orientation,
+            filename: `${editorState.canvasSize === 'BusinessCard' ? 'wizytowka' : 'plakat'}-${Date.now()}.pdf`
+          }),
+        });
+
+        if (response.ok) {
+          const blob = await response.blob();
+          downloadBlob(blob, `${editorState.canvasSize === 'BusinessCard' ? 'wizytowka' : 'plakat'}.pdf`);
+        }
       }
     } catch (error) {
       console.error('Error generating PDF:', error);
-    }
-
-    setIsGenerating(false);
-  };
-
-  const generateHTMLTemplate = async (qrCodeUrl: string): Promise<string> => {
-    const template = creatorState.selectedTemplate;
-    const size = creatorState.selectedSize;
-    if (!template || !size) return '';
-
-    const currentDimensions = getCurrentDimensions() || size.dimensions;
-
-    // Calculate dimensions for HTML (convert mm to px at 96 DPI for screen, but PDF will use actual size)
-    const pixelWidth = currentDimensions.unit === 'mm' 
-      ? Math.round(currentDimensions.width * 3.78) // mm to px conversion
-      : currentDimensions.width;
-    const pixelHeight = currentDimensions.unit === 'mm' 
-      ? Math.round(currentDimensions.height * 3.78)
-      : currentDimensions.height;
-
-    // Responsive font sizes based on format
-    const getFontSizes = () => {
-      const category = size.category;
-      if (category === 'card') {
-        return { title: '18px', subtitle: '12px', description: '10px', qr: '100px' };
-      } else if (category === 'document') {
-        return { title: '32px', subtitle: '20px', description: '16px', qr: '150px' };
-      } else { // poster
-        return { title: '48px', subtitle: '28px', description: '20px', qr: '200px' };
-      }
-    };
-
-    const fonts = getFontSizes();
-
-    const baseStyles = `
-      body { 
-        margin: 0; 
-        padding: 0; 
-        font-family: 'Arial', sans-serif; 
-        background: ${creatorState.backgroundColor}; 
-        color: ${creatorState.textColor};
-        width: ${pixelWidth}px;
-        height: ${pixelHeight}px;
-        overflow: hidden;
-      }
-      .container { 
-        width: ${pixelWidth}px; 
-        height: ${pixelHeight}px; 
-        position: relative;
-        background: ${creatorState.backgroundColor};
-        overflow: hidden;
-      }
-      .qr-code img { width: ${fonts.qr}; height: ${fonts.qr}; }
-    `;
-
-    switch (template.style) {
-      case 'elegant':
-        return `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="UTF-8">
-            <style>
-              ${baseStyles}
-              .elegant {
-                padding: 60px;
-                text-align: center;
-                background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-                position: relative;
-              }
-              .elegant::before {
-                content: '';
-                position: absolute;
-                top: 20px;
-                left: 20px;
-                right: 20px;
-                bottom: 20px;
-                border: 2px solid ${creatorState.accentColor};
-                border-radius: 15px;
-              }
-              .elegant h1 {
-                font-size: ${fonts.title};
-                margin: 0 0 ${size.category === 'card' ? '8px' : '20px'} 0;
-                color: ${creatorState.accentColor};
-                font-weight: bold;
-                text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
-              }
-              .elegant h2 {
-                font-size: ${fonts.subtitle};
-                margin: 0 0 ${size.category === 'card' ? '10px' : '30px'} 0;
-                color: ${creatorState.textColor};
-                opacity: 0.8;
-              }
-              .elegant p {
-                font-size: ${fonts.description};
-                margin: 0 0 ${size.category === 'card' ? '15px' : '40px'} 0;
-                line-height: 1.6;
-                max-width: ${size.category === 'poster' ? '70%' : '90%'};
-                margin-left: auto;
-                margin-right: auto;
-              }
-              .qr-section {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 30px;
-              }
-              .qr-code {
-                border: 3px solid ${creatorState.accentColor};
-                border-radius: 10px;
-                padding: 10px;
-                background: white;
-              }
-              .ornament {
-                position: absolute;
-                font-size: 60px;
-                opacity: 0.1;
-                color: ${creatorState.accentColor};
-              }
-              .ornament-1 { top: 30px; left: 30px; }
-              .ornament-2 { top: 30px; right: 30px; }
-              .ornament-3 { bottom: 30px; left: 30px; }
-              .ornament-4 { bottom: 30px; right: 30px; }
-            </style>
-          </head>
-          <body>
-            <div class="container elegant">
-              <div class="ornament ornament-1">❋</div>
-              <div class="ornament ornament-2">❋</div>
-              <div class="ornament ornament-3">❋</div>
-              <div class="ornament ornament-4">❋</div>
-              
-              <h1>${creatorState.title}</h1>
-              <h2>${creatorState.subtitle}</h2>
-              <p>${creatorState.description}</p>
-              
-              <div class="qr-section">
-                <div>
-                  <img src="${qrCodeUrl}" alt="QR Code" class="qr-code" width="150" height="150">
-                  <div style="margin-top: 15px; font-size: 14px; opacity: 0.7;">Skanuj aby dodać zdjęcia</div>
-                </div>
-              </div>
-            </div>
-          </body>
-          </html>
-        `;
-
-      case 'modern':
-        return `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="UTF-8">
-            <style>
-              ${baseStyles}
-              .modern {
-                padding: 0;
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                height: 100%;
-              }
-              .left-section {
-                background: linear-gradient(135deg, ${creatorState.accentColor} 0%, ${creatorState.accentColor}dd 100%);
-                padding: 60px 40px;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                color: white;
-              }
-              .right-section {
-                padding: 60px 40px;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                align-items: center;
-                background: ${creatorState.backgroundColor};
-              }
-              .modern h1 {
-                font-size: 42px;
-                margin: 0 0 15px 0;
-                font-weight: 300;
-                letter-spacing: -1px;
-              }
-              .modern h2 {
-                font-size: 20px;
-                margin: 0 0 30px 0;
-                opacity: 0.9;
-                font-weight: 300;
-              }
-              .modern p {
-                font-size: 16px;
-                line-height: 1.6;
-                opacity: 0.8;
-              }
-              .qr-modern {
-                text-align: center;
-              }
-              .qr-modern img {
-                border-radius: 15px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-              }
-              .accent-bar {
-                width: 60px;
-                height: 4px;
-                background: white;
-                margin: 30px 0;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container modern">
-              <div class="left-section">
-                <h1>${creatorState.title}</h1>
-                <div class="accent-bar"></div>
-                <h2>${creatorState.subtitle}</h2>
-                <p>${creatorState.description}</p>
-              </div>
-              <div class="right-section">
-                <div class="qr-modern">
-                  <img src="${qrCodeUrl}" alt="QR Code" width="200" height="200">
-                  <div style="margin-top: 20px; font-size: 14px; color: ${creatorState.textColor}; opacity: 0.7;">
-                    Skanuj kod QR
-                  </div>
-                </div>
-              </div>
-            </div>
-          </body>
-          </html>
-        `;
-
-      case 'vintage':
-        return `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="UTF-8">
-            <style>
-              ${baseStyles}
-              .vintage {
-                padding: 50px;
-                text-align: center;
-                background: linear-gradient(45deg, #f4e4c1 0%, #e8d5b7 50%, #d4af37 100%);
-                position: relative;
-                font-family: 'Georgia', serif;
-              }
-              .vintage::before {
-                content: '';
-                position: absolute;
-                top: 30px;
-                left: 30px;
-                right: 30px;
-                bottom: 30px;
-                border: 3px double #8b4513;
-                border-radius: 20px;
-              }
-              .vintage h1 {
-                font-size: 44px;
-                margin: 0 0 10px 0;
-                color: #8b4513;
-                font-weight: bold;
-                text-shadow: 2px 2px 0px rgba(139, 69, 19, 0.3);
-                font-family: 'Georgia', serif;
-              }
-              .vintage h2 {
-                font-size: 22px;
-                margin: 0 0 25px 0;
-                color: #a0522d;
-                font-style: italic;
-              }
-              .vintage p {
-                font-size: 17px;
-                margin: 0 0 35px 0;
-                line-height: 1.7;
-                color: #654321;
-                max-width: 450px;
-                margin-left: auto;
-                margin-right: auto;
-              }
-              .vintage-frame {
-                display: inline-block;
-                padding: 15px;
-                border: 2px solid #8b4513;
-                border-radius: 10px;
-                background: rgba(255, 255, 255, 0.8);
-                box-shadow: inset 0 0 20px rgba(139, 69, 19, 0.2);
-              }
-              .decorative-element {
-                position: absolute;
-                font-size: 30px;
-                color: #8b4513;
-                opacity: 0.6;
-              }
-              .dec-1 { top: 60px; left: 60px; transform: rotate(-15deg); }
-              .dec-2 { top: 60px; right: 60px; transform: rotate(15deg); }
-              .dec-3 { bottom: 60px; left: 60px; transform: rotate(15deg); }
-              .dec-4 { bottom: 60px; right: 60px; transform: rotate(-15deg); }
-            </style>
-          </head>
-          <body>
-            <div class="container vintage">
-              <div class="decorative-element dec-1">❦</div>
-              <div class="decorative-element dec-2">❦</div>
-              <div class="decorative-element dec-3">❦</div>
-              <div class="decorative-element dec-4">❦</div>
-              
-              <h1>${creatorState.title}</h1>
-              <h2>${creatorState.subtitle}</h2>
-              <p>${creatorState.description}</p>
-              
-              <div class="vintage-frame">
-                <img src="${qrCodeUrl}" alt="QR Code" width="160" height="160">
-                <div style="margin-top: 12px; font-size: 13px; color: #8b4513;">Skanuj dla zdjęć</div>
-              </div>
-            </div>
-          </body>
-          </html>
-        `;
-
-      case 'minimal':
-        return `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="UTF-8">
-            <style>
-              ${baseStyles}
-              .minimal {
-                padding: 80px;
-                text-align: center;
-                background: #ffffff;
-              }
-              .minimal h1 {
-                font-size: 52px;
-                margin: 0 0 20px 0;
-                color: ${creatorState.textColor};
-                font-weight: 100;
-                letter-spacing: -2px;
-              }
-              .minimal h2 {
-                font-size: 18px;
-                margin: 0 0 60px 0;
-                color: ${creatorState.textColor};
-                opacity: 0.6;
-                font-weight: 300;
-                letter-spacing: 2px;
-                text-transform: uppercase;
-              }
-              .minimal p {
-                font-size: 16px;
-                margin: 0 0 80px 0;
-                line-height: 1.8;
-                color: ${creatorState.textColor};
-                opacity: 0.8;
-                max-width: 400px;
-                margin-left: auto;
-                margin-right: auto;
-                font-weight: 300;
-              }
-              .qr-minimal {
-                border: 1px solid ${creatorState.textColor};
-                border-opacity: 0.1;
-                padding: 30px;
-                display: inline-block;
-                border-radius: 2px;
-              }
-              .minimal-accent {
-                width: 40px;
-                height: 2px;
-                background: ${creatorState.accentColor};
-                margin: 40px auto;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container minimal">
-              <h1>${creatorState.title}</h1>
-              <div class="minimal-accent"></div>
-              <h2>${creatorState.subtitle}</h2>
-              <p>${creatorState.description}</p>
-              
-              <div class="qr-minimal">
-                <img src="${qrCodeUrl}" alt="QR Code" width="180" height="180">
-                <div style="margin-top: 25px; font-size: 12px; color: ${creatorState.textColor}; opacity: 0.5; letter-spacing: 1px; text-transform: uppercase;">
-                  Scan Code
-                </div>
-              </div>
-            </div>
-          </body>
-          </html>
-        `;
-
-      default:
-        return '';
+    } finally {
+      setEditorState(prev => ({ ...prev, isGenerating: false }));
     }
   };
 
-  const renderPreview = () => {
-    if (!creatorState.selectedTemplate || !creatorState.selectedLayout || !creatorState.selectedSize) return null;
-
-    const layout = creatorState.selectedLayout;
-    const size = creatorState.selectedSize;
-    const currentDimensions = getCurrentDimensions() || size.dimensions;
+  // Generate image for specific side
+  const generateSideImage = async (side: 'front' | 'back'): Promise<string> => {
+    if (!canvasRef.current || !window.fabric) return '';
     
-    // Calculate preview dimensions maintaining aspect ratio
-    const aspectRatio = currentDimensions.width / currentDimensions.height;
-    const previewWidth = aspectRatio > 1 ? 400 : 300;
-    const previewHeight = aspectRatio > 1 ? 400 / aspectRatio : 300 / aspectRatio;
-
-    const renderSection = (section: Layout['sections'][0]) => {
-      const content = getSectionContent(section.id);
-      
-      // Different background colors for different section types
-      const getSectionBgColor = () => {
-        switch (section.type) {
-          case 'text': return '#f9fafb'; // Light gray
-          case 'qr': return '#fef3f2'; // Light red
-          case 'image': return '#f0f9ff'; // Light blue
-          case 'mixed': return '#f7fee7'; // Light green
-          default: return creatorState.backgroundColor;
-        }
-      };
-      
-      const sectionStyle = {
-        backgroundColor: getSectionBgColor(),
-        color: creatorState.textColor,
-      };
-
-      const getSectionClasses = () => {
-        return "border border-gray-200 flex items-center justify-center p-2 min-h-16";
-      };
-
-      return (
-        <div
-          key={section.id}
-          className={`${getSectionClasses()} relative`}
-          style={sectionStyle}
-        >
-          <div className="text-center w-full">
-            {(section.type === 'text' || section.type === 'mixed') && (
-              <>
-                {content?.title && (
-                  <h3 
-                    className="font-bold text-xs mb-1 truncate"
-                    style={{ color: creatorState.accentColor }}
-                  >
-                    {content.title}
-                  </h3>
-                )}
-                {content?.subtitle && (
-                  <h4 className="text-xs mb-1 opacity-80 truncate">
-                    {content.subtitle}
-                  </h4>
-                )}
-                {content?.description && (
-                  <p className="text-xs opacity-70 overflow-hidden">
-                    {content.description.length > 40 
-                      ? content.description.substring(0, 40) + '...' 
-                      : content.description
-                    }
-                  </p>
-                )}
-              </>
-            )}
-            
-            {(section.type === 'qr' || (section.type === 'mixed' && content?.qrText)) && (
-              <div className="flex flex-col items-center mt-1">
-                <div className="w-8 h-8 bg-gray-300 rounded flex items-center justify-center">
-                  <QrCodeIcon className="w-4 h-4 text-gray-600" />
-                </div>
-                <span className="text-xs opacity-60 mt-1">QR</span>
-              </div>
-            )}
-            
-            {section.type === 'image' && (
-              <div className="flex flex-col items-center">
-                <div className="w-8 h-8 bg-gray-300 rounded flex items-center justify-center">
-                  <PhotoIcon className="w-4 h-4 text-gray-600" />
-                </div>
-                <span className="text-xs opacity-60 mt-1">IMG</span>
-              </div>
-            )}
-            
-            {/* Section label */}
-            <div className="absolute top-0 left-0 bg-indigo-500 text-white text-xs px-1 py-0.5 rounded-br opacity-80 z-10">
-              {section.name.split(' ')[0]}
-            </div>
-          </div>
-        </div>
-      );
-    };
-
-    // Determine grid layout based on layout type
-    const getGridClasses = () => {
-      switch (layout.id) {
-        case 'single-full':
-          return "grid-cols-1 grid-rows-1";
-        case 'split-horizontal':
-          return "grid-cols-1 grid-rows-2";
-        case 'split-vertical':
-        case 'asymmetric':
-          return "grid-cols-2 grid-rows-1";
-        case 'thirds-horizontal':
-          return "grid-cols-1 grid-rows-3";
-        case 'center-focus':
-          return "grid-cols-3 grid-rows-1";
-        default:
-          return "grid-cols-2 grid-rows-2";
+    const tempCanvas = new window.fabric.Canvas(null, {
+      width: canvasSize.width,
+      height: canvasSize.height,
+    });
+    
+    const bgColor = canvasDataRef.current[`${side}Background` as keyof typeof canvasDataRef.current] as string;
+    tempCanvas.setBackgroundColor(bgColor, () => {});
+    
+    const objectsData = canvasDataRef.current[side];
+    
+    return new Promise((resolve) => {
+      if (objectsData.length === 0) {
+        resolve(tempCanvas.toDataURL({ format: 'png', quality: 1, multiplier: 2 }));
+        return;
       }
-    };
-
-    return (
-      <div className="bg-gray-100 rounded-xl p-8 flex items-center justify-center">
-        <div className="relative">
-          {/* Size indicator */}
-          <div className="text-center mb-4">
-            <div className="inline-flex items-center px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs font-medium">
-              {size.icon} {size.name} - {layout.name}
-            </div>
-          </div>
-          
-          {/* Preview container */}
-          <div 
-            className={`bg-white rounded-lg shadow-lg overflow-hidden grid gap-0.5 relative ${getGridClasses()}`}
-            style={{ 
-              width: `${previewWidth}px`, 
-              height: `${previewHeight}px`,
-              backgroundColor: creatorState.backgroundColor,
-              ...(layout.id === 'split-vertical' && {
-                gridTemplateColumns: `${layout.sections[0]?.size || 60}fr ${layout.sections[1]?.size || 40}fr`
-              }),
-              ...(layout.id === 'asymmetric' && {
-                gridTemplateColumns: `${layout.sections[0]?.size || 70}fr ${layout.sections[1]?.size || 30}fr`
-              }),
-              ...(layout.id === 'center-focus' && {
-                gridTemplateColumns: `${layout.sections[0]?.size || 20}fr ${layout.sections[1]?.size || 60}fr ${layout.sections[2]?.size || 20}fr`
-              }),
-              ...(layout.id === 'split-horizontal' && {
-                gridTemplateRows: `${layout.sections[0]?.size || 40}fr ${layout.sections[1]?.size || 60}fr`
-              }),
-              ...(layout.id === 'thirds-horizontal' && {
-                gridTemplateRows: `${layout.sections[0]?.size || 25}fr ${layout.sections[1]?.size || 50}fr ${layout.sections[2]?.size || 25}fr`
-              })
-            }}
-          >
-            {layout.sections.map(renderSection)}
-          </div>
-          
-          {/* Layout info */}
-          <div className="text-center mt-3 text-xs text-gray-600">
-            {layout.sections.length} sekcji • {currentDimensions.width}×{currentDimensions.height}mm
-            {creatorState.orientation && size.category !== 'card' && (
-              <span className="ml-2">• {creatorState.orientation === 'portrait' ? 'Pionowy' : 'Poziomy'}</span>
-            )}
-          </div>
-        </div>
-      </div>
-    );
+      
+      window.fabric.util.enlivenObjects(objectsData, (objects: any[]) => {
+        objects.forEach(obj => tempCanvas.add(obj));
+        tempCanvas.renderAll();
+        resolve(tempCanvas.toDataURL({ format: 'png', quality: 1, multiplier: 2 }));
+      });
+    });
   };
 
-  const renderStepIndicator = () => (
-    <div className="flex items-center justify-center space-x-4 mb-8">
-      <div className={`flex items-center ${creatorState.currentStep === 'size' ? 'text-indigo-600' : creatorState.selectedSize ? 'text-green-600' : 'text-gray-400'}`}>
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${creatorState.currentStep === 'size' ? 'bg-indigo-100' : creatorState.selectedSize ? 'bg-green-100' : 'bg-gray-100'}`}>
-          1
-        </div>
-        <span className="ml-2 text-sm font-medium">Rozmiar</span>
-      </div>
-      
-      <div className={`w-8 h-0.5 ${creatorState.selectedSize ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-      
-      <div className={`flex items-center ${creatorState.currentStep === 'template' ? 'text-indigo-600' : creatorState.selectedTemplate ? 'text-green-600' : 'text-gray-400'}`}>
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${creatorState.currentStep === 'template' ? 'bg-indigo-100' : creatorState.selectedTemplate ? 'bg-green-100' : 'bg-gray-100'}`}>
-          2
-        </div>
-        <span className="ml-2 text-sm font-medium">Szablon</span>
-      </div>
-      
-      <div className={`w-8 h-0.5 ${creatorState.selectedTemplate ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-      
-      <div className={`flex items-center ${creatorState.currentStep === 'layout' ? 'text-indigo-600' : creatorState.selectedLayout ? 'text-green-600' : 'text-gray-400'}`}>
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${creatorState.currentStep === 'layout' ? 'bg-indigo-100' : creatorState.selectedLayout ? 'bg-green-100' : 'bg-gray-100'}`}>
-          3
-        </div>
-        <span className="ml-2 text-sm font-medium">Layout</span>
-      </div>
-      
-      <div className={`w-8 h-0.5 ${creatorState.selectedLayout ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-      
-      <div className={`flex items-center ${creatorState.currentStep === 'content' ? 'text-indigo-600' : 'text-gray-400'}`}>
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${creatorState.currentStep === 'content' ? 'bg-indigo-100' : 'bg-gray-100'}`}>
-          4
-        </div>
-        <span className="ml-2 text-sm font-medium">Treść</span>
-      </div>
-    </div>
-  );
+  // Helper function to download blob
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  };
+
+  // Update functions for properties panel
+  const updateSelectedText = (property: string, value: any) => {
+    if (selectedObject && selectedObject.type === 'textbox') {
+      selectedObject.set(property, value);
+      canvasRef.current?.renderAll();
+    }
+  };
+
+  const updateSelectedShape = (property: string, value: any) => {
+    if (selectedObject && ['rect', 'circle', 'triangle', 'line'].includes(selectedObject.type)) {
+      if (property === 'coords') {
+        selectedObject.set(value);
+      } else {
+        selectedObject.set(property, value);
+      }
+      canvasRef.current?.renderAll();
+    }
+  };
+
+  // Toolbar handlers
+  const handleToolSelect = (toolId: string) => {
+    setEditorState(prev => ({ ...prev, selectedTool: toolId as any }));
+  };
+
+  const toggleAI = () => {
+    setEditorState(prev => ({ ...prev, showAI: !prev.showAI }));
+  };
+
+  // AI Design Assistant handlers
+  const handleApplyDesign = (designData: any) => {
+    if (!canvasRef.current) return;
+
+    canvasRef.current.clear();
+    
+    if (designData.elements) {
+      designData.elements.forEach((element: any) => {
+        let fabricObject;
+        
+        switch (element.type) {
+          case 'text':
+            fabricObject = new window.fabric.Textbox(element.text, {
+              left: element.left,
+              top: element.top,
+              fontSize: element.fontSize,
+              fill: element.fill,
+              fontFamily: element.fontFamily || 'Arial'
+            });
+            break;
+          case 'rectangle':
+            fabricObject = new window.fabric.Rect({
+              left: element.left,
+              top: element.top,
+              width: element.width,
+              height: element.height,
+              fill: element.fill
+            });
+            break;
+          case 'circle':
+            fabricObject = new window.fabric.Circle({
+              left: element.left,
+              top: element.top,
+              radius: element.radius,
+              fill: element.fill
+            });
+            break;
+          default:
+            return;
+        }
+        
+        if (fabricObject && canvasRef.current) {
+          canvasRef.current.add(fabricObject);
+        }
+      });
+    }
+    
+    if (designData.backgroundColor) {
+      canvasRef.current.setBackgroundColor(designData.backgroundColor, () => {
+        canvasRef.current?.renderAll();
+      });
+    }
+    
+    canvasRef.current.renderAll();
+    setEditorState(prev => ({ ...prev, showAI: false }));
+  };
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    editorState,
+    setEditorState,
+    selectedObject,
+    onAddText: addText,
+    onAddImage: () => fileInputRef.current?.click(),
+    onAddQRCode: addQRCode,
+    onSwitchSide: switchSide,
+    onDeleteSelected: deleteSelected,
+    onDuplicateSelected: duplicateSelected
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">
-      
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleImageUpload}
+        className="hidden"
+      />
+
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center space-y-4 lg:space-y-0">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Kreator Wizytówek
-              </h1>
+              <div className="flex items-center space-x-3 mb-2">
+                <h1 className="text-3xl font-bold text-gray-900">
+                  {editorState.canvasSize === 'BusinessCard' ? '💳 Kreator Wizytówek' : '🎨 Edytor Plakatu'}
+                </h1>
+                
+                {/* Side indicator for business cards and documents */}
+                {(editorState.canvasSize === 'BusinessCard' || editorState.canvasSize === 'A4') && (
+                  <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    editorState.currentSide === 'front'
+                      ? 'bg-indigo-100 text-indigo-700'
+                      : 'bg-purple-100 text-purple-700'
+                  }`}>
+                    {editorState.currentSide === 'front' ? '📄 Przód' : '📋 Tył'}
+                  </div>
+                )}
+              </div>
+              
               <p className="text-gray-600">
-                Stwórz profesjonalną wizytówkę lub plakat dla swojego wydarzenia
+                {editorState.canvasSize === 'BusinessCard' 
+                  ? `Zaprojektuj profesjonalną wizytówkę z własnym logo i danymi ${
+                      (canvasData.front.length > 0 || canvasData.back.length > 0) ? '• Dwustronna wizytówka' : ''
+                    }`
+                  : 'Stwórz profesjonalny plakat dla swojego wydarzenia'
+                }
               </p>
             </div>
             
             <div className="flex items-center space-x-4">
-              {creatorState.currentStep !== 'size' && (
-                <button
-                  onClick={goToPreviousStep}
-                  className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg transition-colors"
-                >
-                  <ArrowUturnLeftIcon className="w-5 h-5 mr-2" />
-                  Wstecz
-                </button>
-              )}
-
               <button
-                onClick={resetCreator}
+                onClick={clearCanvas}
                 className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg transition-colors"
               >
-                <XMarkIcon className="w-5 h-5 mr-2" />
-                Reset
+                <TrashIcon className="w-5 h-5 mr-2" />
+                Wyczyść
               </button>
               
-              {creatorState.currentStep === 'content' && (
-                <>
-                  <button
-                    onClick={() => setPreviewMode(!previewMode)}
-                    className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg transition-colors"
-                  >
-                    <EyeIcon className="w-5 h-5 mr-2" />
-                    {previewMode ? 'Edycja' : 'Podgląd'}
-                  </button>
-                  
-                  <button
-                    onClick={generatePDF}
-                    disabled={!creatorState.selectedTemplate || !creatorState.selectedSize || isGenerating}
-                    className="flex items-center px-6 py-3 bg-linear-to-r from-indigo-600 to-purple-600 text-white font-medium rounded-xl hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isGenerating ? (
-                      <>
-                        <ArrowPathIcon className="w-5 h-5 mr-2 animate-spin" />
-                        Generowanie...
-                      </>
-                    ) : (
-                      <>
-                        <DocumentArrowDownIcon className="w-5 h-5 mr-2" />
-                        Pobierz PDF
-                      </>
-                    )}
-                  </button>
-                </>
-              )}
-
-              {(creatorState.currentStep === 'size' && creatorState.selectedSize) && (
-                <button
-                  onClick={goToNextStep}
-                  className="flex items-center px-6 py-3 bg-linear-to-r from-indigo-600 to-purple-600 text-white font-medium rounded-xl hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5"
-                >
-                  Dalej
-                  <ChevronRightIcon className="w-5 h-5 ml-2" />
-                </button>
-              )}
-
-              {(creatorState.currentStep === 'template' && creatorState.selectedTemplate) && (
-                <button
-                  onClick={goToNextStep}
-                  className="flex items-center px-6 py-3 bg-linear-to-r from-indigo-600 to-purple-600 text-white font-medium rounded-xl hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5"
-                >
-                  Dalej
-                  <ChevronRightIcon className="w-5 h-5 ml-2" />
-                </button>
-              )}
-
-              {(creatorState.currentStep === 'layout' && creatorState.selectedLayout) && (
-                <button
-                  onClick={goToNextStep}
-                  className="flex items-center px-6 py-3 bg-linear-to-r from-indigo-600 to-purple-600 text-white font-medium rounded-xl hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5"
-                >
-                  Dalej
-                  <ChevronRightIcon className="w-5 h-5 ml-2" />
-                </button>
-              )}
+              <button
+                onClick={exportToPDF}
+                disabled={editorState.isGenerating}
+                className="flex items-center px-6 py-3 bg-linear-to-r from-indigo-600 to-purple-600 text-white font-medium rounded-xl hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {editorState.isGenerating ? (
+                  <>
+                    <ArrowPathIcon className="w-5 h-5 mr-2 animate-spin" />
+                    Generowanie...
+                  </>
+                ) : (
+                  <>
+                    <DocumentArrowDownIcon className="w-5 h-5 mr-2" />
+                    Pobierz PDF
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {renderStepIndicator()}
-        
-        {/* Step 1: Size Selection */}
-        {creatorState.currentStep === 'size' && (
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Wybierz rozmiar</h2>
-              <p className="text-gray-600">Określ format swojej wizytówki lub plakatu</p>
-            </div>
-
-            {/* Orientation Toggle */}
-            {creatorState.selectedSize && canChangeOrientation() && (
-              <div className="mb-8 flex justify-center">
-                <div className="bg-white rounded-xl p-1 border border-gray-200 inline-flex">
-                  <button
-                    onClick={() => updateCreatorState({ orientation: 'portrait' })}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                      creatorState.orientation === 'portrait'
-                        ? 'bg-indigo-600 text-white shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    📄 Pionowy
-                  </button>
-                  <button
-                    onClick={() => updateCreatorState({ orientation: 'landscape' })}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                      creatorState.orientation === 'landscape'
-                        ? 'bg-indigo-600 text-white shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    📄 Poziomy
-                  </button>
-                </div>
-              </div>
-            )}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          
+          {/* Left Sidebar - Settings */}
+          <div className="lg:col-span-1 space-y-6">
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {printSizes.map((size) => {
-                const dimensions = getCurrentDimensions();
-                const displayDimensions = creatorState.selectedSize?.id === size.id && dimensions
-                  ? `${dimensions.width}×${dimensions.height}${dimensions.unit}`
-                  : `${size.dimensions.width}×${size.dimensions.height}${size.dimensions.unit}`;
+            {/* Side Switcher */}
+            <SideSwitcher
+              canvasSize={editorState.canvasSize}
+              currentSide={editorState.currentSide}
+              canvasData={canvasData}
+              onSwitchSide={switchSide}
+            />
+            
+            {/* Canvas Controls */}
+            <CanvasControls
+              canvasSize={editorState.canvasSize}
+              orientation={editorState.orientation}
+              onSizeChange={(size) => setEditorState(prev => ({ ...prev, canvasSize: size }))}
+              onOrientationChange={(orientation) => setEditorState(prev => ({ ...prev, orientation }))}
+              getCanvasSize={getCanvasSize}
+            />
 
-                return (
-                  <button
-                    key={size.id}
-                    onClick={() => updateCreatorState({ selectedSize: size })}
-                    className={`p-6 rounded-2xl border-2 transition-all text-left ${
-                      creatorState.selectedSize?.id === size.id
-                        ? 'border-indigo-500 bg-indigo-50 shadow-lg'
-                        : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
-                    }`}
-                  >
-                    <div className="text-4xl mb-4">{size.icon}</div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{size.name}</h3>
-                    <p className="text-sm text-gray-600 mb-3">{size.description}</p>
-                    <div className="text-xs text-gray-500">
-                      <div>Wymiary: {displayDimensions}</div>
-                      <div>Jakość: {size.dpi} DPI</div>
-                      {creatorState.selectedSize?.id === size.id && creatorState.orientation && (
-                        <div className="mt-1 px-2 py-1 bg-indigo-100 text-indigo-700 rounded inline-block mr-2">
-                          {creatorState.orientation === 'portrait' ? '📄 Pionowy' : '📄 Poziomy'}
-                        </div>
-                      )}
-                      <div className={`mt-1 px-2 py-1 bg-gray-100 rounded text-gray-700 inline-block ${creatorState.selectedSize?.id === size.id && creatorState.orientation ? '' : 'mt-1'}`}>
-                        {size.category === 'card' ? 'Wizytówka' : size.category === 'document' ? 'Dokument' : 'Plakat'}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+            {/* Properties Panel */}
+            <PropertiesPanel
+              selectedObject={selectedObject}
+              onUpdateText={updateSelectedText}
+              onUpdateShape={updateSelectedShape}
+              onBringToFront={bringToFront}
+              onSendToBack={sendToBack}
+              onDelete={deleteSelected}
+            />
           </div>
-        )}
 
-        {/* Step 2: Template Selection */}
-        {creatorState.currentStep === 'template' && (
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Wybierz szablon</h2>
-              <p className="text-gray-600">
-                Dostępne szablony dla formatu: {creatorState.selectedSize?.name}
-              </p>
-            </div>
+          {/* Canvas Area */}
+          <div className="lg:col-span-3">
+            {/* Editor Toolbar */}
+            <EditorToolbar
+              selectedTool={editorState.selectedTool}
+              onToolSelect={handleToolSelect}
+              onAddText={addText}
+              onAddImage={() => fileInputRef.current?.click()}
+              onAddQR={addQRCode}
+              onAddShapes={() => setEditorState(prev => ({ ...prev, selectedTool: 'shapes' }))}
+              onAddShape={addShape}
+              onAddDividers={() => setEditorState(prev => ({ ...prev, selectedTool: 'dividers' }))}
+              onAddDivider={addDivider}
+              onBackground={() => setEditorState(prev => ({ ...prev, selectedTool: 'background' }))}
+              onChangeBackground={changeBackground}
+              currentBackground={editorState.backgroundColor}
+              onClear={clearCanvas}
+              onDuplicate={duplicateSelected}
+              selectedObject={selectedObject}
+              onToggleVisibility={toggleVisibility}
+              onToggleLock={toggleLock}
+              onToggleAI={toggleAI}
+            />
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {getAvailableTemplates().map((template) => (
-                <button
-                  key={template.id}
-                  onClick={() => updateCreatorState({ selectedTemplate: template })}
-                  className={`p-6 rounded-2xl border-2 transition-all text-center ${
-                    creatorState.selectedTemplate?.id === template.id
-                      ? 'border-indigo-500 bg-indigo-50 shadow-lg'
-                      : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
-                  }`}
-                >
-                  <div className="text-4xl mb-4">{template.preview}</div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{template.name}</h3>
-                  <p className="text-sm text-gray-600">{template.description}</p>
-                </button>
-              ))}
-            </div>
+            {/* Canvas Renderer */}
+            <CanvasRenderer
+              canvasElementRef={canvasElementRef}
+              canvasSize={canvasSize}
+              zoom={editorState.zoom}
+              onZoomChange={(zoom) => setEditorState(prev => ({ ...prev, zoom }))}
+              calculateOptimalZoom={calculateOptimalZoom}
+              isLoading={!canvasRef.current}
+            />
           </div>
-        )}
-
-        {/* Step 3: Layout Selection */}
-        {creatorState.currentStep === 'layout' && (
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Wybierz układ treści</h2>
-              <p className="text-gray-600">
-                Jak chcesz podzielić przestrzeń na formatcie {creatorState.selectedSize?.name}?
-              </p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {getAvailableLayouts().map((layout) => (
-                <button
-                  key={layout.id}
-                  onClick={() => updateCreatorState({ selectedLayout: layout })}
-                  className={`p-6 rounded-2xl border-2 transition-all text-left ${
-                    creatorState.selectedLayout?.id === layout.id
-                      ? 'border-indigo-500 bg-indigo-50 shadow-lg'
-                      : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
-                  }`}
-                >
-                  <div className="text-4xl mb-4">{layout.icon}</div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{layout.name}</h3>
-                  <p className="text-sm text-gray-600 mb-4">{layout.description}</p>
-                  
-                  <div className="space-y-2">
-                    <div className="text-xs font-medium text-gray-700">Sekcje:</div>
-                    {layout.sections.map((section) => (
-                      <div key={section.id} className="text-xs text-gray-600 bg-gray-100 rounded px-2 py-1">
-                        <span className="font-medium">{section.name}</span>
-                        <span className="ml-2">
-                          ({section.type === 'text' ? '📝' : section.type === 'qr' ? '📱' : section.type === 'image' ? '🖼️' : '🔀'} 
-                          {section.size}%)
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Step 4: Content Editing */}
-        {creatorState.currentStep === 'content' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            {/* Left Panel - Section Content Settings */}
-            <div className="lg:col-span-1 space-y-6">
-              
-              {/* Sections Editor */}
-              {creatorState.selectedLayout && creatorState.selectedLayout.sections.map((section) => {
-                const content = getSectionContent(section.id);
-                
-                return (
-                  <div key={section.id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                      <span className="text-2xl mr-2">
-                        {section.type === 'text' ? '📝' : section.type === 'qr' ? '📱' : section.type === 'image' ? '🖼️' : '🔀'}
-                      </span>
-                      {section.name}
-                      <span className="ml-2 text-sm text-gray-500">({section.size}%)</span>
-                    </h3>
-                    
-                    <div className="space-y-4">
-                      {(section.type === 'text' || section.type === 'mixed') && (
-                        <>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-900 mb-2">
-                              Tytuł sekcji
-                            </label>
-                            <input
-                              type="text"
-                              value={content?.title || ''}
-                              onChange={(e) => updateSectionContent(section.id, { title: e.target.value })}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                              placeholder="Wpisz tytuł..."
-                            />
-                          </div>
-                          
-                          <div>
-                            <label className="block text-sm font-medium text-gray-900 mb-2">
-                              Podtytuł
-                            </label>
-                            <input
-                              type="text"
-                              value={content?.subtitle || ''}
-                              onChange={(e) => updateSectionContent(section.id, { subtitle: e.target.value })}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                              placeholder="Wpisz podtytuł..."
-                            />
-                          </div>
-                          
-                          <div>
-                            <label className="block text-sm font-medium text-gray-900 mb-2">
-                              Opis
-                            </label>
-                            <textarea
-                              value={content?.description || ''}
-                              onChange={(e) => updateSectionContent(section.id, { description: e.target.value })}
-                              rows={3}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                              placeholder="Wpisz opis zawartości..."
-                            />
-                          </div>
-                        </>
-                      )}
-                      
-                      {(section.type === 'qr' || section.type === 'mixed') && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-900 mb-2">
-                            QR kod - tekst/URL
-                          </label>
-                          <input
-                            type="text"
-                            value={content?.qrText || ''}
-                            onChange={(e) => updateSectionContent(section.id, { qrText: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                            placeholder="https://wrzucfotke.pl/gallery/12345"
-                          />
-                        </div>
-                      )}
-                      
-                      {section.type === 'image' && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-900 mb-2">
-                            Grafika
-                          </label>
-                          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                            <PhotoIcon className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                            <p className="text-sm text-gray-600">Kliknij aby dodać grafikę</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-              
-              {/* Global Styling */}
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <PaintBrushIcon className="w-5 h-5 mr-2 text-indigo-600" />
-                  Kolory globalne
-                </h3>
-                
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-2">
-                      Tło
-                    </label>
-                    <input
-                      type="color"
-                      value={creatorState.backgroundColor}
-                      onChange={(e) => updateCreatorState({ backgroundColor: e.target.value })}
-                      className="w-full h-10 border border-gray-300 rounded-lg cursor-pointer"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-2">
-                      Tekst
-                    </label>
-                    <input
-                      type="color"
-                      value={creatorState.textColor}
-                      onChange={(e) => updateCreatorState({ textColor: e.target.value })}
-                      className="w-full h-10 border border-gray-300 rounded-lg cursor-pointer"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-2">
-                      Akcent
-                    </label>
-                    <input
-                      type="color"
-                      value={creatorState.accentColor}
-                      onChange={(e) => updateCreatorState({ accentColor: e.target.value })}
-                      className="w-full h-10 border border-gray-300 rounded-lg cursor-pointer"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Right Panel - Preview */}
-            <div className="lg:col-span-2">
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <EyeIcon className="w-5 h-5 mr-2 text-indigo-600" />
-                  Podgląd - {creatorState.selectedSize?.name}
-                </h3>
-                
-                <div className="space-y-4">
-                  {renderPreview()}
-                  
-                  <div className="text-center text-sm text-gray-600">
-                    Podgląd w proporcjach {creatorState.selectedSize?.dimensions.width}×{creatorState.selectedSize?.dimensions.height}mm
-                    <br />
-                    Kliknij "Pobierz PDF" aby otrzymać finalny plik gotowy do druku.
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
+
+      {/* AI Design Assistant - Overlay */}
+      {editorState.showAI && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full m-4 max-h-[90vh] overflow-hidden">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">🤖 AI Asystent Designu</h2>
+              <button
+                onClick={() => setEditorState(prev => ({ ...prev, showAI: false }))}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <XMarkIcon className="w-6 h-6 text-gray-600" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+              <AIDesignAssistant 
+                isOpen={editorState.showAI}
+                onClose={() => setEditorState(prev => ({ ...prev, showAI: false }))}
+                onApplyDesign={handleApplyDesign}
+                canvasSize={editorState.canvasSize}
+                orientation={editorState.orientation}
+                backendUrl={process.env.NEXT_PUBLIC_AI_BACKEND_URL || 'http://localhost:3001'}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
