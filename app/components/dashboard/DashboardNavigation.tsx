@@ -10,7 +10,8 @@ import {
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
   PencilSquareIcon,
-  DocumentIcon
+  DocumentIcon,
+  ClipboardDocumentListIcon
 } from '@heroicons/react/24/outline';
 
 interface DashboardNavProps {
@@ -30,6 +31,7 @@ export default function DashboardNavigation({
     { name: 'Galeria', href: '/dashboard/gallery', icon: PhotoIcon },
     { name: 'Edytor', href: '/dashboard/editor', icon: PencilSquareIcon },
     { name: 'Kreator', href: '/dashboard/creator', icon: DocumentIcon },
+    { name: 'Zamówienia', href: '/dashboard/o', icon: ClipboardDocumentListIcon },
     { name: 'Ustawienia', href: '/dashboard/settings', icon: Cog6ToothIcon }
   ];
 

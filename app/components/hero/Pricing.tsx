@@ -3,9 +3,12 @@
 import { useState } from 'react';
 import { CheckIcon, XMarkIcon, StarIcon, HeartIcon } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
+import PurchaseModal from '../purchase/PurchaseModal';
 
 export default function Pricing() {
   const [isAnnual, setIsAnnual] = useState(false);
+  const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<any>(null);
 
   const plans = [
     {
@@ -204,6 +207,19 @@ export default function Pricing() {
 
               {/* CTA Button */}
               <button
+                onClick={() => {
+                  if (plan.name === 'Starter') {
+                    // For free plan, redirect to dashboard
+                    window.location.href = '/dashboard';
+                  } else if (plan.name === 'Pro') {
+                    // For Pro plan, redirect to contact
+                    window.location.href = '/contact';
+                  } else {
+                    // For Wedding plan, open purchase modal
+                    setSelectedPlan(plan);
+                    setIsPurchaseModalOpen(true);
+                  }
+                }}
                 className={`w-full py-4 px-6 rounded-xl font-semibold transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg ${
                   plan.popular
                     ? `bg-linear-to-r ${plan.gradient} text-white shadow-lg hover:shadow-xl`
@@ -255,6 +271,14 @@ export default function Pricing() {
           </div>
         </div>
       </div>
+
+      {/* Purchase Modal */}
+      <PurchaseModal
+        isOpen={isPurchaseModalOpen}
+        onClose={() => setIsPurchaseModalOpen(false)}
+        selectedPlan={selectedPlan}
+        isAnnual={isAnnual}
+      />
     </section>
   );
 }
