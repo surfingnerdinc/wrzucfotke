@@ -8,7 +8,7 @@ export default function DashboardLayout({
   return (
     <div className="min-h-screen bg-gray-50">
       <DashboardNavigation />
-      <main>
+      <main className="pb-20 md:pb-0">
         {children}
       </main>
     </div>
