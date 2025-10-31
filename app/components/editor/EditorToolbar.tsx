@@ -234,9 +234,9 @@ export default function EditorToolbar({
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-2 mb-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         {/* Main Tools */}
-        <div className="flex items-center space-x-1">
+        <div className="flex items-center flex-wrap gap-1">
           {tools.map(tool => {
             // Special handling for shapes tool with dropdown
             if (tool.id === 'shapes' && onAddShape) {
@@ -572,37 +572,41 @@ export default function EditorToolbar({
           )}
         </div>
         
-        {/* Orientation Toggle */}
-        <div className="flex items-center">
-          <div className="w-px h-8 bg-gray-200 mx-2"></div>
-          <button
-            onClick={onOrientationToggle}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors group relative"
-            title="Orientacja"
-          >
-            <div className="w-6 h-6 flex items-center justify-center">
-              {currentOrientation === 'portrait' ? (
-                <div className="w-3 h-4 border-2 border-gray-600 rounded-sm"></div>
-              ) : (
-                <div className="w-4 h-3 border-2 border-gray-600 rounded-sm"></div>
-              )}
-            </div>
-          </button>
-        </div>
-        
-        {/* Right Side Actions */}
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={onClear}
-            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors group"
-            title="Wyczyść wszystko"
-          >
-            <TrashIcon className="w-5 h-5" />
-            <div className="absolute bottom-full right-0 mb-2 px-3 py-1 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-              Wyczyść wszystko
-              <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-900"></div>
-            </div>
-          </button>
+        {/* Secondary Actions Row - Orientation & Actions */}
+        <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-4">
+          
+          {/* Orientation Toggle */}
+          <div className="flex items-center">
+            <div className="hidden sm:block w-px h-8 bg-gray-200 mx-2"></div>
+            <button
+              onClick={onOrientationToggle}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors group relative"
+              title="Orientacja"
+            >
+              <div className="w-6 h-6 flex items-center justify-center">
+                {currentOrientation === 'portrait' ? (
+                  <div className="w-3 h-4 border-2 border-gray-600 rounded-sm"></div>
+                ) : (
+                  <div className="w-4 h-3 border-2 border-gray-600 rounded-sm"></div>
+                )}
+              </div>
+            </button>
+          </div>
+          
+          {/* Right Side Actions */}
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={onClear}
+              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors group"
+              title="Wyczyść wszystko"
+            >
+              <TrashIcon className="w-5 h-5" />
+              <div className="absolute bottom-full right-0 mb-2 px-3 py-1 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                Wyczyść wszystko
+                <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-900"></div>
+              </div>
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -92,14 +92,35 @@ export function useCanvasState() {
 
   // Calculate optimal zoom to fit canvas in viewport
   const calculateOptimalZoom = () => {
-    const maxWidth = window.innerWidth < 1024 ? window.innerWidth - 40 : 800; // Desktop max width
-    const maxHeight = window.innerHeight - 300; // Leave space for header/footer
+    // SSR safety check
+    if (typeof window === 'undefined') {
+      return 0.5; // Default zoom for SSR
+    }
+    
+    const isMobile = window.innerWidth < 768;
+    const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
+    
+    let maxWidth, maxHeight;
+    
+    if (isMobile) {
+      // Mobile: mycket mindre space för UI
+      maxWidth = window.innerWidth - 32; // 16px padding på każdą stronę
+      maxHeight = window.innerHeight - 450; // Więcej przestrzeni dla toolbar i controls
+    } else if (isTablet) {
+      // Tablet: średni rozmiar
+      maxWidth = window.innerWidth - 60;
+      maxHeight = window.innerHeight - 350;
+    } else {
+      // Desktop: duży rozmiar
+      maxWidth = 800;
+      maxHeight = window.innerHeight - 300;
+    }
     
     const scaleX = maxWidth / canvasSize.width;
     const scaleY = maxHeight / canvasSize.height;
     const optimalZoom = Math.min(scaleX, scaleY, 1); // Never zoom in beyond 100%
     
-    return Math.max(optimalZoom, 0.2); // Minimum 20% zoom
+    return Math.max(optimalZoom, isMobile ? 0.15 : 0.2); // Jeszcze mniejszy zoom na mobile
   };
 
   // Update zoom when canvas size or orientation changes

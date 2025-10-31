@@ -70,6 +70,7 @@ export default function CreatorPage() {
   const canvasElementRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isFabricLoaded, setIsFabricLoaded] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const [propertiesUpdateKey, setPropertiesUpdateKey] = useState(0);
   
   // Use custom hooks
@@ -92,6 +93,11 @@ export default function CreatorPage() {
   const reactiveCanvasSize = useMemo(() => {
     return getCanvasSize(editorState.canvasSize, editorState.orientation);
   }, [editorState.canvasSize, editorState.orientation, getCanvasSize]);
+
+  // Check if we're on client side
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Initialize Fabric.js canvas
   useEffect(() => {
@@ -252,6 +258,17 @@ export default function CreatorPage() {
       });
     }
   }, [editorState.backgroundColor, editorState.currentSide]);
+
+  // Auto-optimize zoom for mobile on initial load and orientation changes
+  useEffect(() => {
+    if (canvasRef.current && isFabricLoaded && typeof window !== 'undefined') {
+      const isMobile = window.innerWidth < 768;
+      if (isMobile) {
+        const optimalZoom = calculateOptimalZoom();
+        setEditorState(prev => ({ ...prev, zoom: optimalZoom }));
+      }
+    }
+  }, [isFabricLoaded, editorState.canvasSize, editorState.orientation, calculateOptimalZoom]);
 
   // Tool functions
   const addText = () => {
@@ -884,6 +901,18 @@ export default function CreatorPage() {
     onDuplicateSelected: duplicateSelected
   });
 
+  // Don't render on server side
+  if (!isClient) {
+    return (
+      <div className="h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Ładowanie editora...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen bg-gray-50 flex flex-col">
       {/* Hidden file input */}
@@ -967,7 +996,7 @@ export default function CreatorPage() {
         </div>
       </div>
 
-      <div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 overflow-hidden">
+      <div className="flex-1 max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-2 sm:py-6 overflow-hidden">
         <Suspense fallback={
           <div className="flex flex-col h-full">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">

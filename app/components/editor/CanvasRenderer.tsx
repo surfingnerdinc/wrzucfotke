@@ -67,32 +67,32 @@ export default function CanvasRenderer({
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
       {/* Zoom and Pan Controls */}
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center space-x-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-6 w-full sm:w-auto">
           {/* Zoom Controls */}
-          <div className="flex items-center space-x-4">
-            <span className="text-sm font-medium text-gray-700">🔍 Zoom:</span>
-            <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 sm:space-x-4">
+            <span className="text-xs sm:text-sm font-medium text-gray-700">🔍</span>
+            <div className="flex items-center space-x-1 sm:space-x-2">
               <button
                 onClick={() => onZoomChange(Math.max(zoom - 0.1, 0.2))}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-1 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 disabled={zoom <= 0.2}
               >
-                <MinusIcon className="w-4 h-4" />
+                <MinusIcon className="w-3 h-3 sm:w-4 sm:h-4" />
               </button>
               
-              <div className="w-24 text-center">
-                <span className="text-sm font-medium text-gray-900">
+              <div className="w-16 sm:w-24 text-center">
+                <span className="text-xs sm:text-sm font-medium text-gray-900">
                   {Math.round(zoom * 100)}%
                 </span>
               </div>
               
               <button
                 onClick={() => onZoomChange(Math.min(zoom + 0.1, 2))}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-1 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 disabled={zoom >= 2}
               >
-                <PlusIcon className="w-4 h-4" />
+                <PlusIcon className="w-3 h-3 sm:w-4 sm:h-4" />
               </button>
             </div>
           </div>
@@ -126,23 +126,24 @@ export default function CanvasRenderer({
         
         <button
           onClick={() => onZoomChange(calculateOptimalZoom())}
-          className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+          className="px-2 py-1 sm:px-3 sm:py-2 text-xs sm:text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
         >
-          Dopasuj do okna
+          <span className="hidden sm:inline">Dopasuj do okna</span>
+          <span className="sm:hidden">Dopasuj</span>
         </button>
       </div>
 
       {/* Canvas Container */}
       <div 
         ref={containerRef}
-        className="flex items-center justify-center overflow-hidden bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 p-8"
+        className="flex items-center justify-center overflow-hidden bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 p-2 sm:p-4 lg:p-8"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
         style={{ 
           cursor: panMode ? (isPanning ? 'grabbing' : 'grab') : 'default',
-          height: 'calc(100% - 120px)' // Full available height minus controls
+          height: 'calc(100vh - 400px)' // Use viewport height instead of window.innerWidth
         }}
       >
         <div 
