@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Invalid effect type' }, { status: 400 });
     }
 
-    // Convert to JPEG and get buffer
+    // Convert processed image to buffer
     const outputBuffer = await processedImage.jpeg({ quality: 90 }).toBuffer();
 
     // Return the processed image
