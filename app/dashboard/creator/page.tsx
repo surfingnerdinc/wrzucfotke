@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useState, Suspense } from 'react';
+import { useRef, useEffect, useState, Suspense, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { 
   DocumentArrowDownIcon,
@@ -87,6 +87,11 @@ export default function CreatorPage() {
     calculateOptimalZoom,
     updateCanvasData
   } = useCanvasState();
+
+  // Create reactive canvas size that updates with orientation changes
+  const reactiveCanvasSize = useMemo(() => {
+    return getCanvasSize(editorState.canvasSize, editorState.orientation);
+  }, [editorState.canvasSize, editorState.orientation, getCanvasSize]);
 
   // Initialize Fabric.js canvas
   useEffect(() => {
@@ -654,7 +659,7 @@ export default function CreatorPage() {
     try {
       saveCurrentCanvasState();
       
-      const shouldExportBothSides = (editorState.canvasSize === 'BusinessCard' || editorState.canvasSize === 'A4') && 
+      const shouldExportBothSides = (editorState.canvasSize !== 'Square') && 
                                    (canvasDataRef.current.front.length > 0 || canvasDataRef.current.back.length > 0);
       
       if (shouldExportBothSides) {
@@ -672,13 +677,13 @@ export default function CreatorPage() {
             size: editorState.canvasSize,
             orientation: editorState.orientation,
             doubleSided: true,
-            filename: `${editorState.canvasSize === 'BusinessCard' ? 'wizytowka' : 'dokument'}-dwustronna-${Date.now()}.pdf`
+            filename: `${editorState.canvasSize === 'BusinessCard' ? 'wizytowka' : editorState.canvasSize === 'A5' ? 'broszura' : 'dokument'}-dwustronna-${Date.now()}.pdf`
           }),
         });
 
         if (response.ok) {
           const blob = await response.blob();
-          downloadBlob(blob, `${editorState.canvasSize === 'BusinessCard' ? 'wizytowka' : 'dokument'}-dwustronna.pdf`);
+          downloadBlob(blob, `${editorState.canvasSize === 'BusinessCard' ? 'wizytowka' : editorState.canvasSize === 'A5' ? 'broszura' : 'dokument'}-dwustronna.pdf`);
         }
       } else {
         const dataURL = canvasRef.current.toDataURL({
@@ -880,7 +885,7 @@ export default function CreatorPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="h-screen bg-gray-50 flex flex-col">
       {/* Hidden file input */}
       <input
         ref={fileInputRef}
@@ -897,11 +902,16 @@ export default function CreatorPage() {
             <div>
               <div className="flex items-center space-x-3 mb-2">
                 <h1 className="text-3xl font-bold text-gray-900">
-                  {editorState.canvasSize === 'BusinessCard' ? '💳 Kreator Wizytówek' : '🎨 Edytor Plakatu'}
+                  {editorState.canvasSize === 'BusinessCard' 
+                    ? '💳 Kreator Wizytówek' 
+                    : editorState.canvasSize === 'A5'
+                    ? '📖 Kreator Broszur'
+                    : '🎨 Edytor Plakatu'
+                  }
                 </h1>
                 
-                {/* Side indicator for business cards and documents */}
-                {(editorState.canvasSize === 'BusinessCard' || editorState.canvasSize === 'A4') && (
+                {/* Side indicator for two-sided documents */}
+                {editorState.canvasSize !== 'Square' && (
                   <div className={`px-3 py-1 rounded-full text-sm font-medium ${
                     editorState.currentSide === 'front'
                       ? 'bg-indigo-100 text-indigo-700'
@@ -916,6 +926,10 @@ export default function CreatorPage() {
                 {editorState.canvasSize === 'BusinessCard' 
                   ? `Zaprojektuj profesjonalną wizytówkę z własnym logo i danymi ${
                       (canvasData.front.length > 0 || canvasData.back.length > 0) ? '• Dwustronna wizytówka' : ''
+                    }`
+                  : editorState.canvasSize === 'A5'
+                  ? `Stwórz profesjonalną broszurę z informacjami ${
+                      (canvasData.front.length > 0 || canvasData.back.length > 0) ? '• Dwustronna broszura' : ''
                     }`
                   : 'Stwórz profesjonalny plakat dla swojego wydarzenia'
                 }
@@ -953,57 +967,40 @@ export default function CreatorPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 overflow-hidden">
         <Suspense fallback={
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            <div className="lg:col-span-1 space-y-6">
-              <div className="h-32 bg-gray-100 rounded-lg animate-pulse"></div>
-              <div className="h-64 bg-gray-100 rounded-lg animate-pulse"></div>
-              <div className="h-48 bg-gray-100 rounded-lg animate-pulse"></div>
+          <div className="flex flex-col h-full">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="h-20 bg-gray-100 rounded-lg animate-pulse"></div>
+              <div className="h-20 bg-gray-100 rounded-lg animate-pulse"></div>
             </div>
-            <div className="lg:col-span-3">
-              <div className="h-16 bg-gray-100 rounded-lg animate-pulse mb-6"></div>
-              <div className="h-96 bg-gray-100 rounded-lg animate-pulse"></div>
-            </div>
+            <div className="h-16 bg-gray-100 rounded-lg animate-pulse mb-4"></div>
+            <div className="flex-1 bg-gray-100 rounded-lg animate-pulse"></div>
           </div>
         }>
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          <div className="flex flex-col h-full">
             
-            {/* Left Sidebar - Settings */}
-            <div className="lg:col-span-1 space-y-6">
+            {/* Top Controls Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               
               {/* Side Switcher */}
               <SideSwitcher
-              canvasSize={editorState.canvasSize}
-              currentSide={editorState.currentSide}
-              canvasData={canvasData}
-              onSwitchSide={switchSide}
-            />
-            
-            {/* Canvas Controls */}
-            <CanvasControls
-              canvasSize={editorState.canvasSize}
-              orientation={editorState.orientation}
-              onSizeChange={(size) => setEditorState(prev => ({ ...prev, canvasSize: size }))}
-              onOrientationChange={(orientation) => setEditorState(prev => ({ ...prev, orientation }))}
-              getCanvasSize={getCanvasSize}
-            />
+                canvasSize={editorState.canvasSize}
+                currentSide={editorState.currentSide}
+                canvasData={canvasData}
+                onSwitchSide={switchSide}
+              />
+              
+              {/* Canvas Controls */}
+              <CanvasControls
+                canvasSize={editorState.canvasSize}
+                orientation={editorState.orientation}
+                onSizeChange={(size) => setEditorState(prev => ({ ...prev, canvasSize: size }))}
+                getCanvasSize={getCanvasSize}
+              />
+            </div>
 
-            {/* Properties Panel */}
-            <PropertiesPanel
-              key={`properties-${propertiesUpdateKey}-${selectedObject?.id || 'none'}`}
-              selectedObject={selectedObject}
-              onUpdateText={updateSelectedText}
-              onUpdateShape={updateSelectedShape}
-              onBringToFront={bringToFront}
-              onSendToBack={sendToBack}
-              onDelete={deleteSelected}
-            />
-          </div>
-
-          {/* Canvas Area */}
-          <div className="lg:col-span-3">
-            {/* Editor Toolbar */}
+            {/* Editor Toolbar - Full Width */}
             <EditorToolbar
               selectedTool={editorState.selectedTool}
               onToolSelect={handleToolSelect}
@@ -1023,19 +1020,41 @@ export default function CreatorPage() {
               onToggleVisibility={toggleVisibility}
               onToggleLock={toggleLock}
               onToggleAI={toggleAI}
+              currentOrientation={editorState.orientation}
+              canvasSize={editorState.canvasSize}
+              onOrientationToggle={() => setEditorState(prev => ({ 
+                ...prev, 
+                orientation: prev.orientation === 'portrait' ? 'landscape' : 'portrait' 
+              }))}
             />
             
+            {/* Properties Panel - Shows when object is selected */}
+            {selectedObject && (
+              <div className="mb-4">
+                <PropertiesPanel
+                  key={`properties-${propertiesUpdateKey}-${selectedObject?.id || 'none'}`}
+                  selectedObject={selectedObject}
+                  onUpdateText={updateSelectedText}
+                  onUpdateShape={updateSelectedShape}
+                  onBringToFront={bringToFront}
+                  onSendToBack={sendToBack}
+                  onDelete={deleteSelected}
+                />
+              </div>
+            )}
+            
             {/* Canvas Renderer */}
-            <CanvasRenderer
-              canvasElementRef={canvasElementRef}
-              canvasSize={canvasSize}
-              zoom={editorState.zoom}
-              onZoomChange={(zoom) => setEditorState(prev => ({ ...prev, zoom }))}
-              calculateOptimalZoom={calculateOptimalZoom}
-              isLoading={!canvasRef.current || !isFabricLoaded}
-            />
+            <div className="flex-1 min-h-0 pt-2">
+              <CanvasRenderer
+                canvasElementRef={canvasElementRef}
+                canvasSize={reactiveCanvasSize}
+                zoom={editorState.zoom}
+                onZoomChange={(zoom) => setEditorState(prev => ({ ...prev, zoom }))}
+                calculateOptimalZoom={calculateOptimalZoom}
+                isLoading={!canvasRef.current || !isFabricLoaded}
+              />
+            </div>
           </div>
-        </div>
         </Suspense>
       </div>
 

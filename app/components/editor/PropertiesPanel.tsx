@@ -45,8 +45,8 @@ export default function PropertiesPanel({
   };
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">🎛️ Właściwości</h3>
+    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+      <h3 className="text-sm font-semibold text-gray-900 mb-3">🎛️ Właściwości obiektu</h3>
       
       {/* Text Properties */}
       {selectedObject.type === 'textbox' && (

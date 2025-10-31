@@ -48,6 +48,11 @@ interface EditorToolbarProps {
   onToggleVisibility?: () => void;
   onToggleLock?: () => void;
   onToggleAI?: () => void;
+  
+  // Orientation props
+  currentOrientation?: 'portrait' | 'landscape';
+  canvasSize?: string;
+  onOrientationToggle?: () => void;
   onAddDividers?: () => void;
   onAddDivider?: (type: '2h' | '2v' | '3h' | '3v' | '4grid' | '3left' | '3right' | '3leftH' | '3rightH') => void;
   onChangeBackground?: (color: string) => void;
@@ -71,6 +76,9 @@ export default function EditorToolbar({
   onToggleVisibility,
   onToggleLock,
   onToggleAI,
+  currentOrientation,
+  canvasSize,
+  onOrientationToggle,
   onAddDividers,
   onAddDivider,
   onChangeBackground,
@@ -562,6 +570,24 @@ export default function EditorToolbar({
               {objectTools.map(renderTool)}
             </>
           )}
+        </div>
+        
+        {/* Orientation Toggle */}
+        <div className="flex items-center">
+          <div className="w-px h-8 bg-gray-200 mx-2"></div>
+          <button
+            onClick={onOrientationToggle}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors group relative"
+            title="Orientacja"
+          >
+            <div className="w-6 h-6 flex items-center justify-center">
+              {currentOrientation === 'portrait' ? (
+                <div className="w-3 h-4 border-2 border-gray-600 rounded-sm"></div>
+              ) : (
+                <div className="w-4 h-3 border-2 border-gray-600 rounded-sm"></div>
+              )}
+            </div>
+          </button>
         </div>
         
         {/* Right Side Actions */}
