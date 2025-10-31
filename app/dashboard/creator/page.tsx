@@ -1,20 +1,43 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { 
   DocumentArrowDownIcon,
   TrashIcon,
   ArrowPathIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
-import EditorToolbar from '@/app/components/editor/EditorToolbar';
-import AIDesignAssistant from '@/app/components/editor/AIDesignAssistant';
-import CanvasControls from '@/app/components/editor/CanvasControls';
-import SideSwitcher from '@/app/components/editor/SideSwitcher';
-import PropertiesPanel from '@/app/components/editor/PropertiesPanel';
-import CanvasRenderer from '@/app/components/editor/CanvasRenderer';
 import { useCanvasState } from '@/app/hooks/useCanvasState';
 import { useKeyboardShortcuts } from '@/app/hooks/useKeyboardShortcuts';
+
+// Lazy load editor components for better performance
+const EditorToolbar = dynamic(() => import('@/app/components/editor/EditorToolbar'), {
+  loading: () => <div className="h-16 bg-gray-100 rounded-lg animate-pulse"></div>
+});
+const AIDesignAssistant = dynamic(() => import('@/app/components/editor/AIDesignAssistant'));
+const CanvasControls = dynamic(() => import('@/app/components/editor/CanvasControls'), {
+  loading: () => <div className="h-64 bg-gray-100 rounded-lg animate-pulse"></div>
+});
+const SideSwitcher = dynamic(() => import('@/app/components/editor/SideSwitcher'), {
+  loading: () => <div className="h-32 bg-gray-100 rounded-lg animate-pulse"></div>
+});
+const PropertiesPanel = dynamic(() => import('@/app/components/editor/PropertiesPanel'), {
+  loading: () => <div className="h-48 bg-gray-100 rounded-lg animate-pulse"></div>
+});
+const CanvasRenderer = dynamic(() => import('@/app/components/editor/CanvasRenderer'), {
+  loading: () => (
+    <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-200">
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <ArrowPathIcon className="w-12 h-12 text-gray-400 animate-spin mx-auto mb-4" />
+          <p className="text-gray-500 text-lg">Ładowanie editora...</p>
+          <p className="text-gray-400 text-sm mt-2">Przygotowywanie narzędzi do designu</p>
+        </div>
+      </div>
+    </div>
+  )
+});
 
 // Fabric.js types
 interface FabricCanvas {
@@ -46,6 +69,8 @@ export default function CreatorPage() {
   const canvasRef = useRef<FabricCanvas | null>(null);
   const canvasElementRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isFabricLoaded, setIsFabricLoaded] = useState(false);
+  const [propertiesUpdateKey, setPropertiesUpdateKey] = useState(0);
   
   // Use custom hooks
   const {
@@ -80,6 +105,7 @@ export default function CreatorPage() {
         });
 
         canvasRef.current = canvas;
+        setIsFabricLoaded(true);
 
         // Add default text based on canvas size
         const isBusinessCard = editorState.canvasSize === 'BusinessCard';
@@ -150,6 +176,38 @@ export default function CreatorPage() {
         canvas.on('object:removed', saveHandler);
       }
     };
+
+    // Check if Fabric.js is already loaded (from preload)
+    if (window.fabric && canvasElementRef.current) {
+      // Fabric is already loaded, initialize immediately
+      const size = getCanvasSize(editorState.canvasSize, editorState.orientation);
+      
+      const canvas = new window.fabric.Canvas(canvasElementRef.current, {
+        width: size.width,
+        height: size.height,
+        backgroundColor: editorState.backgroundColor,
+      });
+
+      canvasRef.current = canvas;
+      setIsFabricLoaded(true);
+
+      // Add default content and setup events like in script.onload
+      const isBusinessCard = editorState.canvasSize === 'BusinessCard';
+      const defaultText = new window.fabric.Textbox(
+        isBusinessCard ? 'Jan Kowalski' : 'Mój Plakat', 
+        {
+          left: isBusinessCard ? 20 : 100,
+          top: isBusinessCard ? 30 : 100,
+          fontSize: isBusinessCard ? 16 : 48,
+          fontFamily: 'Arial',
+          fill: '#333333',
+          width: isBusinessCard ? 200 : 400,
+        }
+      );
+      canvas.add(defaultText);
+      
+      return; // Exit early, no need to load script
+    }
 
     document.head.appendChild(script);
 
@@ -700,6 +758,20 @@ export default function CreatorPage() {
     if (selectedObject && selectedObject.type === 'textbox') {
       selectedObject.set(property, value);
       canvasRef.current?.renderAll();
+      
+      // Force PropertiesPanel re-render
+      setPropertiesUpdateKey(prev => prev + 1);
+      
+      // Save changes to canvas data
+      setTimeout(() => {
+        if (!canvasRef.current) return;
+        const currentObjects = canvasRef.current.getObjects();
+        canvasDataRef.current = {
+          ...canvasDataRef.current,
+          [editorState.currentSide]: currentObjects.map(obj => obj.toObject())
+        };
+        setCanvasData({...canvasDataRef.current});
+      }, 100);
     }
   };
 
@@ -711,6 +783,20 @@ export default function CreatorPage() {
         selectedObject.set(property, value);
       }
       canvasRef.current?.renderAll();
+      
+      // Force PropertiesPanel re-render
+      setPropertiesUpdateKey(prev => prev + 1);
+      
+      // Save changes to canvas data
+      setTimeout(() => {
+        if (!canvasRef.current) return;
+        const currentObjects = canvasRef.current.getObjects();
+        canvasDataRef.current = {
+          ...canvasDataRef.current,
+          [editorState.currentSide]: currentObjects.map(obj => obj.toObject())
+        };
+        setCanvasData({...canvasDataRef.current});
+      }, 100);
     }
   };
 
@@ -868,13 +954,26 @@ export default function CreatorPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          
-          {/* Left Sidebar - Settings */}
-          <div className="lg:col-span-1 space-y-6">
+        <Suspense fallback={
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <div className="lg:col-span-1 space-y-6">
+              <div className="h-32 bg-gray-100 rounded-lg animate-pulse"></div>
+              <div className="h-64 bg-gray-100 rounded-lg animate-pulse"></div>
+              <div className="h-48 bg-gray-100 rounded-lg animate-pulse"></div>
+            </div>
+            <div className="lg:col-span-3">
+              <div className="h-16 bg-gray-100 rounded-lg animate-pulse mb-6"></div>
+              <div className="h-96 bg-gray-100 rounded-lg animate-pulse"></div>
+            </div>
+          </div>
+        }>
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             
-            {/* Side Switcher */}
-            <SideSwitcher
+            {/* Left Sidebar - Settings */}
+            <div className="lg:col-span-1 space-y-6">
+              
+              {/* Side Switcher */}
+              <SideSwitcher
               canvasSize={editorState.canvasSize}
               currentSide={editorState.currentSide}
               canvasData={canvasData}
@@ -892,6 +991,7 @@ export default function CreatorPage() {
 
             {/* Properties Panel */}
             <PropertiesPanel
+              key={`properties-${propertiesUpdateKey}-${selectedObject?.id || 'none'}`}
               selectedObject={selectedObject}
               onUpdateText={updateSelectedText}
               onUpdateShape={updateSelectedShape}
@@ -932,10 +1032,11 @@ export default function CreatorPage() {
               zoom={editorState.zoom}
               onZoomChange={(zoom) => setEditorState(prev => ({ ...prev, zoom }))}
               calculateOptimalZoom={calculateOptimalZoom}
-              isLoading={!canvasRef.current}
+              isLoading={!canvasRef.current || !isFabricLoaded}
             />
           </div>
         </div>
+        </Suspense>
       </div>
 
       {/* AI Design Assistant - Overlay */}
