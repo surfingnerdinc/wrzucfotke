@@ -13,13 +13,18 @@ import {
   PaintBrushIcon,
   DocumentTextIcon,
   QrCodeIcon,
-  SparklesIcon
+  SparklesIcon,
+  ArrowUpTrayIcon,
+  ChartBarIcon,
+  UserGroupIcon
 } from '@heroicons/react/24/outline';
 import FeatureModal from './FeatureModal';
+import { useProduct } from '../../contexts/ProductContext';
 
 export default function Features() {
   const [selectedFeature, setSelectedFeature] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { activeProduct } = useProduct();
 
   const handleFeatureClick = (feature: any) => {
     setSelectedFeature(feature);
@@ -31,7 +36,7 @@ export default function Features() {
     setSelectedFeature(null);
   };
 
-  const features = [
+  const galleryFeatures = [
     {
       icon: PhotoIcon,
       title: "Nieograniczony Upload",
@@ -118,6 +123,95 @@ export default function Features() {
     }
   ];
 
+  const transferFeatures = [
+    {
+      icon: ArrowUpTrayIcon,
+      title: "Duże Pliki",
+      description: "Wysyłaj pliki do 50GB! Filmy, projekty, archiwum - bez ograniczeń. Profesjonalne narzędzie dla każdego biznesu.",
+      color: "from-blue-500 to-indigo-500",
+      bgColor: "bg-blue-50"
+    },
+    {
+      icon: ClockIcon,
+      title: "Szybki Transfer",
+      description: "Najszybsze przesyłanie w Polsce! Optymalizacja dla dużych plików i inteligentna kompresja bez utraty jakości.",
+      color: "from-green-500 to-emerald-500",
+      bgColor: "bg-green-50"
+    },
+    {
+      icon: ShieldCheckIcon,
+      title: "Bezpieczeństwo Enterprise",
+      description: "Szyfrowanie end-to-end, kontrola dostępu, hasła jednorazowe. Twoje dane chronione na poziomie korporacyjnym.",
+      color: "from-red-500 to-pink-500",
+      bgColor: "bg-red-50"
+    },
+    {
+      icon: ChartBarIcon,
+      title: "Analityka i Raporty",
+      description: "Śledź pobierania, czas dostępu, statystyki użytkowników. Kompletne raporty dla Twojego zespołu.",
+      color: "from-purple-500 to-indigo-500",
+      bgColor: "bg-purple-50"
+    },
+    {
+      icon: UserGroupIcon,
+      title: "Współpraca Zespołowa",
+      description: "Zarządzaj uprawnieniami, twórz grupy, oznaczaj pliki. Idealne dla agencji, studiów i firm kreatywnych.",
+      color: "from-orange-500 to-red-500",
+      bgColor: "bg-orange-50"
+    },
+    {
+      icon: CloudArrowDownIcon,
+      title: "Masa Pobierania",
+      description: "Pobierz wszystko jako archiwum ZIP lub pojedyncze pliki. Wygodne linki, powiadomienia e-mail.",
+      color: "from-cyan-500 to-blue-500",
+      bgColor: "bg-cyan-50"
+    },
+    {
+      icon: ClockIcon,
+      title: "Kontrola Ważności",
+      description: "Ustaw kiedy link wygaśnie - od godziny do roku. Automatyczne usuwanie, powiadomienia przed końcem.",
+      color: "from-amber-500 to-orange-500",
+      bgColor: "bg-amber-50"
+    },
+    {
+      icon: GlobeAltIcon,
+      title: "API dla Deweloperów",
+      description: "Integruj z własnymi systemami! REST API, webhooks, automatyzacja. Dokumentacja i przykłady kodu.",
+      color: "from-teal-500 to-cyan-500",
+      bgColor: "bg-teal-50"
+    },
+    {
+      icon: DevicePhoneMobileIcon,
+      title: "Aplikacje Mobilne",
+      description: "Natywne aplikacje iOS i Android. Wysyłaj z galerii, otrzymuj powiadomienia, zarządzaj transferami offline.",
+      color: "from-indigo-500 to-purple-500",
+      bgColor: "bg-indigo-50"
+    },
+    {
+      icon: ShareIcon,
+      title: "Smart Links",
+      description: "Krótkie, czytelne linki z podglądem. QR kody, osadzanie w e-mail, integracja z CRM i narzędziami biznesowymi.",
+      color: "from-violet-500 to-purple-500",
+      bgColor: "bg-violet-50"
+    },
+    {
+      icon: DocumentTextIcon,
+      title: "Wersjonowanie Plików",
+      description: "Historia zmian, przywracanie poprzednich wersji, komentarze do plików. Nigdy nie stracisz ważnych danych.",
+      color: "from-emerald-500 to-teal-500",
+      bgColor: "bg-emerald-50"
+    },
+    {
+      icon: SparklesIcon,
+      title: "Brandowanie",
+      description: "Twoje logo, kolory, domeny własne. Profesjonalny wizerunek w każdym wysłanym linku. White-label rozwiązania.",
+      color: "from-pink-500 to-rose-500",
+      bgColor: "bg-pink-50"
+    }
+  ];
+
+  const features = activeProduct === 'gallery' ? galleryFeatures : transferFeatures;
+
   return (
     <section className="py-24 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -125,11 +219,14 @@ export default function Features() {
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-            Dlaczego <span className="bg-linear-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">WrzućFotkę.pl</span>?
+              <>Dlaczego <span className="bg-linear-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">WrzućFotkę.pl</span>?</>
           </h2>
           <p className="text-xl text-gray-600 leading-relaxed">
-            Stworzyliśmy najłatwiejszy sposób na zbieranie i udostępnianie zdjęć z każdej imprezy. 
-            Bez zbędnych komplikacji, za darmo i z pełną kontrolą nad Twoimi wspomnieniami.
+            {activeProduct === 'gallery' ? (
+              'Stworzyliśmy najłatwiejszy sposób na zbieranie i udostępnianie zdjęć z każdej imprezy. Bez zbędnych komplikacji, za darmo i z pełną kontrolą nad Twoimi wspomnieniami.'
+            ) : (
+              'Profesjonalne narzędzie do przesyłania dużych plików dla firm i kreatywnych zespołów. Bezpieczne, szybkie i z pełną kontrolą nad współpracą.'
+            )}
           </p>
         </div>
 
@@ -183,16 +280,32 @@ export default function Features() {
         <div className="text-center mt-16">
           <div className="inline-flex items-center px-6 py-3 rounded-full bg-linear-to-r from-green-100 to-blue-100 text-green-800 text-sm font-medium mb-6">
             <span className="w-2 h-2 bg-green-500 rounded-full mr-3 animate-pulse"></span>
-            Już ponad 1000 imprez skorzystało z naszego serwisu!
+            {activeProduct === 'gallery' ? (
+              'Już ponad 1000 imprez skorzystało z naszego serwisu!'
+            ) : (
+              'Już ponad 500 firm wysłało przez nas wielkie pliki!'
+            )}
           </div>
           <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
-            Przekonaj się sam jak to działa
+            {activeProduct === 'gallery' ? (
+              'Przekonaj się sam jak to działa'
+            ) : (
+              'Wypróbuj za darmo już dziś'
+            )}
           </h3>
           <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
-            Stworzenie galerii trwa dosłownie minutę. Sprawdź jak łatwo możesz zebrać wszystkie zdjęcia z Twojej imprezy!
+            {activeProduct === 'gallery' ? (
+              'Stworzenie galerii trwa dosłownie minutę. Sprawdź jak łatwo możesz zebrać wszystkie zdjęcia z Twojej imprezy!'
+            ) : (
+              'Pierwsza wysyłka za darmo, pełny dostęp do funkcji premium. Zobacz jak prosto można przesyłać duże pliki!'
+            )}
           </p>
           <button className="inline-flex items-center px-8 py-4 text-lg font-semibold text-white bg-linear-to-r from-indigo-600 to-purple-600 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300">
-            Stwórz galerię za darmo
+            {activeProduct === 'gallery' ? (
+              'Stwórz galerię za darmo'
+            ) : (
+              'Wyślij pierwszy plik za darmo'
+            )}
             <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
             </svg>

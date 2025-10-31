@@ -8,13 +8,18 @@ import {
   CloudArrowDownIcon, 
   QrCodeIcon,
   UserGroupIcon,
-  ClockIcon
+  ClockIcon,
+  ArrowUpTrayIcon,
+  ShieldCheckIcon,
+  ChartBarIcon
 } from '@heroicons/react/24/outline';
+import { useProduct } from '../../contexts/ProductContext';
 
 export default function HowItWorks() {
   const [activeStep, setActiveStep] = useState(0);
+  const { activeProduct } = useProduct();
 
-  const steps = [
+  const gallerySteps = [
     {
       id: 1,
       title: "Stwórz Galerię",
@@ -97,6 +102,75 @@ export default function HowItWorks() {
     }
   ];
 
+  const transferSteps = [
+    {
+      id: 1,
+      title: "Wybierz Pliki",
+      subtitle: "Do 50GB jednocześnie",
+      description: "Przeciągnij pliki do przeglądarki lub wybierz z komputera. Duże filmy, projekty, archiwum - bez limitów.",
+      icon: ArrowUpTrayIcon,
+      color: "from-blue-500 to-cyan-500",
+      bgColor: "bg-blue-50",
+      image: "https://picsum.photos/400/300?random=20",
+      details: [
+        "Przeciągnij i upuść lub kliknij aby wybrać",
+        "Wielkie pliki do 50GB na transfer",
+        "Wiele plików jednocześnie",
+        "Podgląd przed wysłaniem"
+      ]
+    },
+    {
+      id: 2,
+      title: "Ustaw Bezpieczeństwo",
+      subtitle: "Kontrola dostępu",
+      description: "Dodaj hasło, ustaw datę wygaśnięcia, ogranicz liczbę pobrań. Pełna kontrola nad tym kto i kiedy pobierze pliki.",
+      icon: ShieldCheckIcon,
+      color: "from-red-500 to-pink-500",
+      bgColor: "bg-red-50",
+      image: "https://picsum.photos/400/300?random=21",
+      details: [
+        "Hasło do linku pobierania",
+        "Data wygaśnięcia linku", 
+        "Limit liczby pobrań",
+        "Szyfrowanie end-to-end"
+      ]
+    },
+    {
+      id: 3,
+      title: "Udostępnij Link",
+      subtitle: "Profesjonalnie i bezpiecznie",
+      description: "Otrzymujesz krótki, czytelny link z podglądem. Wyślij e-mailem, przez chat lub wstaw do CRM.",
+      icon: ShareIcon,
+      color: "from-purple-500 to-indigo-500",
+      bgColor: "bg-purple-50",
+      image: "https://picsum.photos/400/300?random=22",
+      details: [
+        "Krótki, czytelny link",
+        "Podgląd plików przed pobraniem",
+        "QR kod dla łatwego dostępu",
+        "Integracja z e-mail i CRM"
+      ]
+    },
+    {
+      id: 4,
+      title: "Śledź Aktywność",
+      subtitle: "Analityka w czasie rzeczywistym",
+      description: "Zobacz kto pobrał pliki, kiedy i ile razy. Otrzymuj powiadomienia o każdej aktywności.",
+      icon: ChartBarIcon,
+      color: "from-green-500 to-emerald-500",
+      bgColor: "bg-green-50",
+      image: "https://picsum.photos/400/300?random=23",
+      details: [
+        "Statystyki pobrań w czasie rzeczywistym",
+        "Powiadomienia e-mail o aktywności",
+        "Geografia dostępu do plików",
+        "Eksport raportów do PDF/Excel"
+      ]
+    }
+  ];
+
+  const steps = activeProduct === 'gallery' ? gallerySteps : transferSteps;
+
   return (
     <section className="py-24 bg-linear-to-br from-gray-50 to-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -107,8 +181,11 @@ export default function HowItWorks() {
             Jak to <span className="bg-linear-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">działa</span>?
           </h2>
           <p className="text-xl text-gray-600 leading-relaxed">
-            Zbieranie zdjęć nigdy nie było prostsze. Wystarczą 4 proste kroki i możesz cieszyć się 
-            wszystkimi wspomnieniami z Twojej imprezy w jednym miejscu.
+            {activeProduct === 'gallery' ? (
+              'Zbieranie zdjęć nigdy nie było prostsze. Wystarczą 5 prostych kroków i możesz cieszyć się wszystkimi wspomnieniami z Twojej imprezy w jednym miejscu.'
+            ) : (
+              'Przesyłanie dużych plików nigdy nie było tak proste. Wystarczą 4 kroki i Twoje pliki dotrą bezpiecznie do odbiorców.'
+            )}
           </p>
         </div>
 

@@ -1,8 +1,15 @@
 'use client';
 
 import { QrCodeIcon, CameraIcon, HeartIcon } from '@heroicons/react/24/outline';
+import { useProduct } from '../../contexts/ProductContext';
 
 export default function HowQRWorks() {
+  const { activeProduct } = useProduct();
+
+  // Only show this component for gallery product
+  if (activeProduct !== 'gallery') {
+    return null;
+  }
   const steps = [
     {
       step: "KROK 1",

@@ -1,16 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckIcon, XMarkIcon, StarIcon, HeartIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, XMarkIcon, StarIcon, HeartIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
 import PurchaseModal from '../purchase/PurchaseModal';
+import { useProduct } from '../../contexts/ProductContext';
 
 export default function Pricing() {
   const [isAnnual, setIsAnnual] = useState(false);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
+  const { activeProduct } = useProduct();
 
-  const plans = [
+  const galleryPlans = [
     {
       name: "Starter",
       subtitle: "Dla małych imprez",
@@ -92,6 +94,91 @@ export default function Pricing() {
     }
   ];
 
+  const transferPlans = [
+    {
+      name: "Transfer Basic",
+      subtitle: "Dla freelancerów",
+      price: { monthly: 50, annual: 500 },
+      originalPrice: null,
+      description: "Idealne na początek pracy z klientami",
+      features: [
+        "50GB storage",
+        "200GB transfer miesięcznie", 
+        "Pliki do 2GB",
+        "Ochrona hasłem",
+        "7 dni przechowywania linków",
+        "Podstawowe analytics",
+        "Email support"
+      ],
+      limitations: [
+        "Brak team features",
+        "Ograniczone analytics",
+        "Podstawowe branding"
+      ],
+      color: "blue",
+      gradient: "from-blue-500 to-blue-600", 
+      bgGradient: "from-blue-50 to-white",
+      popular: false,
+      cta: "Rozpocznij Basic"
+    },
+    {
+      name: "Transfer Pro", 
+      subtitle: "Najpopularniejszy! 🚀",
+      price: { monthly: 120, annual: 1200 },
+      originalPrice: null,
+      description: "Dla profesjonalistów i małych agencji",
+      features: [
+        "200GB storage",
+        "1TB transfer miesięcznie",
+        "Pliki do 5GB", 
+        "Zaawansowane zabezpieczenia",
+        "30 dni przechowywania linków",
+        "Szczegółowe analytics",
+        "Custom branding",
+        "Priority support",
+        "Bulk uploads",
+        "API dostęp"
+      ],
+      limitations: [
+        "Ograniczona współpraca team"
+      ],
+      color: "purple",
+      gradient: "from-purple-500 to-indigo-500",
+      bgGradient: "from-purple-50 to-indigo-50", 
+      popular: true,
+      cta: "Wybierz Pro"
+    },
+    {
+      name: "Transfer Business",
+      subtitle: "Dla zespołów",
+      price: { monthly: 250, annual: 2500 },
+      originalPrice: null,
+      description: "Rozwiązanie dla firm i dużych zespołów",
+      features: [
+        "1TB storage",
+        "Unlimited transfer",
+        "Pliki do 10GB",
+        "Enterprise security", 
+        "Unlimited czas przechowywania",
+        "Advanced analytics & reports",
+        "White-label branding",
+        "Team collaboration",
+        "Admin panel", 
+        "SLA 99.9%",
+        "Dedykowany success manager",
+        "Custom integrations"
+      ],
+      limitations: [],
+      color: "emerald",
+      gradient: "from-emerald-500 to-green-500",
+      bgGradient: "from-emerald-50 to-green-50",
+      popular: false,
+      cta: "Skontaktuj się"
+    }
+  ];
+
+  const plans = activeProduct === 'gallery' ? galleryPlans : transferPlans;
+
   return (
     <section className="py-24 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -99,11 +186,22 @@ export default function Pricing() {
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-            Wybierz swój <span className="bg-linear-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">plan</span>
+            {activeProduct === 'gallery' ? (
+              <>
+                Wybierz swój <span className="bg-linear-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">plan</span>
+              </>
+            ) : (
+              <>
+                <ArrowUpTrayIcon className="w-12 h-12 mx-auto mb-4 text-indigo-600" />
+                Plany <span className="bg-linear-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Transfer</span>
+              </>
+            )}
           </h2>
           <p className="text-xl text-gray-600 leading-relaxed mb-8">
-            Mamy plan idealny dla każdej okazji. Od małych urodzin po wielkie wesela. 
-            Wszystko za przystępną cenę, z gwarancją satysfakcji!
+            {activeProduct === 'gallery' 
+              ? 'Mamy plan idealny dla każdej okazji. Od małych urodzin po wielkie wesela. Wszystko za przystępną cenę, z gwarancją satysfakcji!'
+              : 'Profesjonalne rozwiązania do przesyłania dużych plików. Bezpieczne, szybkie i niezawodne dla Twojego biznesu.'
+            }
           </p>
 
           {/* Pricing Toggle */}
